@@ -762,7 +762,51 @@
           </div>
         </div>
       </div>
+<div class="field full">
+  <label for="docDescription">Kurzbeschreibung</label>
+  <textarea
+    id="docDescription"
+    placeholder="Kurze Beschreibung des Inhalts für Suche und Vorschau"
+  ></textarea>
+</div>
 
+<div class="field full">
+  <label for="docTags">Schlagwörter</label>
+  <input
+    id="docTags"
+    placeholder="z. B. VLAN, Switching, Netzwerktechnik, IHK"
+  >
+</div>
+
+<div class="field">
+  <label for="docStatus">Dokumentstatus</label>
+  <select id="docStatus">
+    <option value="entwurf">Entwurf</option>
+    <option value="in-bearbeitung">In Bearbeitung</option>
+    <option value="fertig">Fertig</option>
+  </select>
+</div>
+
+<div class="field">
+  <label for="docTargetFolder">Zielordner</label>
+  <select id="docTargetFolder">
+    <option value="">Ordner auswählen …</option>
+    <option value="netzwerktechnik">Netzwerktechnik</option>
+    <option value="betriebssysteme">Betriebssysteme</option>
+    <option value="programmierung">Programmierung</option>
+    <option value="datenbanken">Datenbanken</option>
+    <option value="mathematik-und-logik">Mathematik und Logik</option>
+    <option value="allgemein">Allgemein</option>
+  </select>
+</div>
+
+<div class="field full">
+  <label for="docFilename">Dateiname</label>
+  <input
+    id="docFilename"
+    placeholder="z. B. virtual-local-area-network"
+  >
+</div>
       <div class="section-card guide-card" id="guideCard">
         <div class="guide-heading">
           <div>
@@ -1010,7 +1054,16 @@
 
   const $ = (id) => document.getElementById(id);
   const els = {
-    docTitle: $('docTitle'), docSubject: $('docSubject'), docAuthor: $('docAuthor'), docDate: $('docDate'), dashboardSubject: $('dashboardSubject'),
+    docTitle: $('docTitle'),
+docSubject: $('docSubject'),
+docAuthor: $('docAuthor'),
+docDate: $('docDate'),
+docDescription: $('docDescription'),
+docTags: $('docTags'),
+docStatus: $('docStatus'),
+docTargetFolder: $('docTargetFolder'),
+docFilename: $('docFilename'),
+dashboardSubject: $('dashboardSubject'),
     insertBar: $('insertBar'), blockList: $('blockList'), pages: $('pages'), status: $('status'),
     fileInput: $('fileInput'), wordFileInput: $('wordFileInput'), startOverlay: $('startOverlay'), toast: $('toast'),
     previewPane: document.querySelector('.preview-pane'), aiPanel: $('aiPanel'), aiContext: $('aiContext'), aiQuestion: $('aiQuestion'),
@@ -1023,15 +1076,19 @@
   }
 
   function createBlankState(subject = '') {
-    return {
-      version: 14,
-      title: '',
-      subject: String(subject || ''),
-      author: '',
-      date: todayLabel(),
-      blocks: []
-    };
-  }
+ return {
+  version: 15,
+  title: '',
+  subject: String(subject || ''),
+  author: '',
+  date: todayLabel(),
+  description: '',
+  tags: '',
+  status: 'entwurf',
+  targetFolder: '',
+  filename: '',
+  blocks: []
+};
 
   function createTemplateState(kind, subject = '') {
     const base = createBlankState(subject);
@@ -1101,13 +1158,27 @@
     select.value = subject;
   }
 
-  function hydrateInputs() {
-    els.docTitle.value = state.title || '';
-    setSubjectSelectValue(els.docSubject, state.subject || '');
-    setSubjectSelectValue(els.dashboardSubject, state.subject || '');
-    els.docAuthor.value = state.author || '';
-    els.docDate.value = state.date || '';
-  }
+function hydrateInputs() {
+  els.docTitle.value = state.title || '';
+
+  setSubjectSelectValue(
+    els.docSubject,
+    state.subject || ''
+  );
+
+  setSubjectSelectValue(
+    els.dashboardSubject,
+    state.subject || ''
+  );
+
+  els.docAuthor.value = state.author || '';
+  els.docDate.value = state.date || '';
+  els.docDescription.value = state.description || '';
+  els.docTags.value = state.tags || '';
+  els.docStatus.value = state.status || 'entwurf';
+  els.docTargetFolder.value = state.targetFolder || '';
+  els.docFilename.value = state.filename || '';
+}
 
   function renderInsertBar() {
     els.insertBar.innerHTML = '';
@@ -1765,23 +1836,28 @@ function codeLanguageSelectHTML(value = '') {
       return false;
     }
   }
-
-  function normalizeState(data) {
-    return {
-      version: 14,
-      title: String(data?.title ?? ''),
-      subject: String(data?.subject ?? ''),
-      author: String(data?.author ?? ''),
-      date: String(data?.date ?? ''),
-      blocks: Array.isArray(data?.blocks) ? data.blocks.map(b => ({
+function normalizeState(data) {
+return {
+  version: 15,
+  title: String(data?.title ?? ''),
+  subject: String(data?.subject ?? ''),
+  author: String(data?.author ?? ''),
+  date: String(data?.date ?? ''),
+  description: String(data?.description ?? ''),
+  tags: String(data?.tags ?? ''),
+  status: String(data?.status ?? 'entwurf'),
+  targetFolder: String(data?.targetFolder ?? ''),
+  filename: String(data?.filename ?? ''),
+  blocks: Array.isArray(data?.blocks)
+    ? data.blocks.map(b => ({
         id: b.id || uid(),
         type: TYPE_LABELS[b.type] ? b.type : 'paragraph',
         title: String(b.title ?? ''),
         content: String(b.content ?? ''),
         extra: String(b.extra ?? '')
-      })) : []
-    };
-  }
+      }))
+    : []
+};
 
   function createPage(kind = 'normal') {
     const page = document.createElement('section');
@@ -2299,16 +2375,34 @@ ${content}
     window.addEventListener('message', listener);
   }
 
-  function bindMetaInputs() {
-    const mapping = [['docTitle','title'],['docSubject','subject'],['docAuthor','author'],['docDate','date']];
-    mapping.forEach(([id,key]) => {
-      els[id].addEventListener('input', () => {
-        state[key] = els[id].value;
-        if (key === 'subject') setSubjectSelectValue(els.dashboardSubject, state.subject);
-        changed(false);
-      });
+function bindMetaInputs() {
+  const mapping = [
+    ['docTitle', 'title'],
+    ['docSubject', 'subject'],
+    ['docAuthor', 'author'],
+    ['docDate', 'date'],
+    ['docDescription', 'description'],
+    ['docTags', 'tags'],
+    ['docStatus', 'status'],
+    ['docTargetFolder', 'targetFolder'],
+    ['docFilename', 'filename']
+  ];
+
+  mapping.forEach(([id, key]) => {
+    els[id].addEventListener('input', () => {
+      state[key] = els[id].value;
+
+      if (key === 'subject') {
+        setSubjectSelectValue(
+          els.dashboardSubject,
+          state.subject
+        );
+      }
+
+      changed(false);
     });
-  }
+  });
+}
 
   function downloadBlob(filename, content, type) {
     const blob = new Blob([content], {type});
