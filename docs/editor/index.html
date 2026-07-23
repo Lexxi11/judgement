@@ -1178,7 +1178,44 @@
       : `<input data-key="${key}" value="${escapeHTML(value)}" placeholder="${escapeHTML(placeholder)}">`;
     return `<div class="field"><label>${label}</label>${control}</div>`;
   }
+function codeLanguageSelectHTML(value = '') {
+  const selectedLanguage = value || 'text';
 
+  const languages = [
+    ['text', 'Text / keine Hervorhebung'],
+    ['csharp', 'C#'],
+    ['sql', 'SQL'],
+    ['bash', 'Bash / Linux'],
+    ['powershell', 'PowerShell'],
+    ['python', 'Python'],
+    ['javascript', 'JavaScript'],
+    ['typescript', 'TypeScript'],
+    ['html', 'HTML'],
+    ['css', 'CSS'],
+    ['yaml', 'YAML'],
+    ['json', 'JSON'],
+    ['xml', 'XML'],
+    ['dockerfile', 'Dockerfile']
+  ];
+
+  const options = languages
+    .map(([value, label]) => `
+      <option value="${escapeHTML(value)}"
+        ${value === selectedLanguage ? 'selected' : ''}>
+        ${escapeHTML(label)}
+      </option>
+    `)
+    .join('');
+
+  return `
+    <div class="field">
+      <label>Programmiersprache</label>
+      <select data-key="extra">
+        ${options}
+      </select>
+    </div>
+  `;
+}
   function buildBlockFields(container, block) {
     switch (block.type) {
       case 'h1':
@@ -1198,10 +1235,24 @@
         container.innerHTML = fieldHTML('Bezeichnung', block.title, 'title', false, TYPE_LABELS[block.type]) +
           fieldHTML('Inhalt', block.content, 'content', true, 'Inhalt eingeben');
         break;
-      case 'code':
-        container.innerHTML = fieldHTML('Überschrift, optional', block.title, 'title', false, 'z. B. SELECT') +
-          fieldHTML('Code', block.content, 'content', true, 'SELECT *\nFROM produkt;');
-        break;
+     case 'code':
+  container.innerHTML =
+    fieldHTML(
+      'Überschrift, optional',
+      block.title,
+      'title',
+      false,
+      'z. B. SELECT-Abfrage'
+    ) +
+    codeLanguageSelectHTML(block.extra) +
+    fieldHTML(
+      'Code',
+      block.content,
+      'content',
+      true,
+      'SELECT *\nFROM produkt;'
+    );
+  break;
       case 'table':
         container.innerHTML = fieldHTML('Überschrift, optional', block.title, 'title', false, 'z. B. Tabelle Kunde') +
           fieldHTML('Tabelleninhalt', block.content, 'content', true, 'Spalten mit Tabulator trennen.\nZeilen mit Enter trennen.');
@@ -1816,11 +1867,16 @@
         wrapper.appendChild(box);
         break;
       }
-      case 'code': {
-        addHeading(block.title || '');
-        const pre = document.createElement('pre'); pre.className = 'doc-code'; pre.innerHTML = highlightCode(block.content); wrapper.appendChild(pre);
-        break;
-      }
+     case 'code': {
+  const language = String(block.extra || 'text')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._+-]/g, '') || 'text';
+
+  return `${title ? '### ' + title + '\n\n' : ''}\`\`\`${language}
+${content}
+\`\`\``;
+}
       case 'table': {
         addHeading(block.title || '');
         wrapper.appendChild(buildTable(block.content));
