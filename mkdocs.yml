@@ -30,6 +30,8 @@ theme:
 plugins:
   - search:
       lang: de
+  - meta
+  - tags
 
 markdown_extensions:
   - admonition
