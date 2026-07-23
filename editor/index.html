@@ -1,0 +1,2987 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lernjournal Editor 14</title>
+<style>
+  :root {
+    --bg: #080a0d;
+    --panel: #11151b;
+    --panel-2: #171c24;
+    --border: #2a3340;
+    --text: #edf3f8;
+    --muted: #9aa8b6;
+    --accent: #41d9df;
+    --accent-2: #7d6bff;
+    --danger: #ff6b7d;
+    --paper-blue: #1f4e79;
+    --paper-magenta: #ff66ff;
+    --paper-purple: #7030a0;
+    --paper-orange: #e36c0a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  button, input, textarea, select { font: inherit; }
+  button { cursor: pointer; }
+
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  .topbar {
+    min-height: 56px;
+    padding: 8px 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #0d1117;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .brand {
+    font-weight: 750;
+    letter-spacing: .2px;
+    margin-right: 8px;
+    color: var(--accent);
+  }
+
+  .btn {
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--panel-2);
+    border-radius: 10px;
+    padding: 9px 12px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: #14383b; border-color: #23666a; }
+  .btn.danger { color: #ffd8dd; }
+  .btn.small { padding: 6px 9px; border-radius: 8px; font-size: 13px; }
+  .btn.icon { width: 34px; padding: 6px 0; text-align: center; }
+
+  .status {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .workspace {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(390px, 44%) 1fr;
+  }
+
+  .editor-pane {
+    min-width: 0;
+    overflow: auto;
+    padding: 14px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+  }
+
+  .preview-pane {
+    min-width: 0;
+    overflow: auto;
+    padding: 24px;
+    background: #22272e;
+  }
+
+  .section-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 750;
+    margin: 0 0 10px;
+    color: var(--accent);
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .field { display: grid; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { color: var(--muted); font-size: 12px; font-weight: 650; }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: #0c1016;
+    color: var(--text);
+    border-radius: 9px;
+    padding: 10px;
+    outline: none;
+  }
+  .field textarea { min-height: 92px; resize: vertical; line-height: 1.4; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+
+  .insert-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .block-card {
+    background: #0d1218;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .block-card:focus-within { border-color: #376f76; }
+
+  .block-head {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #121923;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .block-actions { display: flex; gap: 5px; }
+  .block-body { display: grid; gap: 9px; padding: 10px; }
+  .block-type {
+    border: 1px solid var(--border);
+    background: #0d1218;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 9px;
+  }
+
+  .empty-state {
+    padding: 28px 16px;
+    border: 1px dashed #3a4655;
+    border-radius: 12px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .pages {
+    display: grid;
+    gap: 18px;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    flex: none;
+    background: white;
+    color: #111;
+    box-shadow: 0 8px 28px rgba(0,0,0,.38);
+    overflow: hidden;
+    font-family: Tahoma, Arial, sans-serif;
+  }
+
+  .page-header {
+    position: absolute;
+    top: 5mm;
+    left: 15mm;
+    right: 20mm;
+    height: 8mm;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: 2mm;
+    border-bottom: .3mm solid #6b6b6b;
+    font: 10pt Arial, sans-serif;
+  }
+
+  .page-footer {
+    position: absolute;
+    bottom: 7mm;
+    left: 15mm;
+    right: 20mm;
+    text-align: center;
+    font: 10pt Arial, sans-serif;
+  }
+
+  .page-content {
+    position: absolute;
+    top: 25mm;
+    left: 15mm;
+    right: 20mm;
+    bottom: 25mm;
+    overflow: hidden;
+  }
+
+  .page.cover .page-content { top: 25mm; }
+  .page.cover .page-header { display: none; }
+
+  .doc-title {
+    margin: 24pt 0 12pt;
+    text-align: center;
+    font-family: Calibri, Tahoma, Arial, sans-serif;
+    font-size: 20pt;
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--paper-blue);
+  }
+
+  .doc-date {
+    margin: 0 0 10pt;
+    text-align: center;
+    font: 12pt Arial, sans-serif;
+    color: #666;
+  }
+
+  .doc-h1 {
+    margin: 12pt 0 6pt;
+    text-align: center;
+    font-size: 16pt;
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--paper-blue);
+    break-after: avoid;
+  }
+
+  .doc-h2 {
+    margin: 10pt 0 4pt;
+    font-size: 13pt;
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--paper-blue);
+    break-after: avoid;
+  }
+
+  .doc-p, .doc-list, .doc-table, .doc-code, .qa-wrap {
+    margin: 9pt 0 6pt;
+    font-size: 11pt;
+    line-height: 1.15;
+  }
+
+  .doc-p { white-space: pre-wrap; }
+  .doc-list { padding-left: 7mm; }
+  .doc-list li { margin: 0 0 3pt; padding-left: 1mm; }
+
+  .doc-label {
+    margin: 9pt 0 3pt;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+
+  .note-box {
+    margin: 10pt 0 6pt;
+    padding: 7pt 9pt;
+    border-left: 3pt solid var(--paper-blue);
+    background: #f4f7fa;
+    font-size: 11pt;
+    line-height: 1.2;
+  }
+  .note-box .note-title { font-weight: 700; color: var(--paper-blue); margin-bottom: 4pt; }
+  .note-box.merksatz { text-align: center; border-left: 0; border-top: 1pt solid #888; border-bottom: 1pt solid #888; background: transparent; }
+  .note-box.merksatz .note-title { font-size: 13pt; }
+
+  .doc-code {
+    white-space: pre-wrap;
+    font-family: Tahoma, Arial, sans-serif;
+    background: transparent;
+    padding: 0;
+  }
+  .sql-keyword { color: var(--paper-magenta); }
+  .sql-type { color: var(--paper-purple); }
+  .sql-number { color: var(--paper-orange); }
+  .sql-string { color: #008000; }
+  .sql-comment { color: #666; font-style: italic; }
+
+  .doc-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .doc-table th, .doc-table td {
+    border-bottom: 1px solid #999;
+    padding: 5pt 4pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  .doc-table th { font-weight: 700; color: var(--paper-blue); }
+
+  .qa-wrap .qa-label { font-weight: 700; margin-top: 6pt; }
+  .qa-wrap .qa-text { margin-top: 2pt; white-space: pre-wrap; }
+
+  .toc-title { margin-top: 12pt; }
+  .toc-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 5pt;
+    min-height: 15pt;
+    margin: 0 0 5pt;
+    font-size: 11pt;
+    line-height: 1.1;
+  }
+  .toc-entry.level-2 { padding-left: 11pt; }
+  .toc-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #777; transform: translateY(-2pt); }
+  .toc-page { min-width: 18pt; text-align: right; }
+
+  .oversize-warning {
+    border: 2px solid #c73645;
+    padding: 8pt;
+    color: #9d1d2a;
+    font-weight: 700;
+  }
+
+  .start-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(5px);
+  }
+  .start-overlay.hidden { display: none; }
+  .start-dialog {
+    width: min(420px, calc(100vw - 32px));
+    padding: 24px;
+    border-radius: 22px;
+    border: 1px solid #2c3745;
+    background: #0d1117;
+    box-shadow: 0 24px 70px rgba(0,0,0,.6);
+  }
+  .start-dialog h1 { margin: 0 0 6px; color: var(--accent); font-size: 22px; }
+  .start-dialog p { color: var(--muted); margin: 0 0 20px; line-height: 1.45; }
+  .start-actions { display: grid; gap: 10px; }
+  .start-actions .btn { padding: 13px; font-size: 16px; }
+
+  .toast {
+    position: fixed;
+    z-index: 70;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    background: #101923;
+    border: 1px solid #344556;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: .2s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100vh; }
+    .workspace { grid-template-columns: 1fr; }
+    .editor-pane { border-right: 0; border-bottom: 1px solid var(--border); max-height: none; }
+    .preview-pane { min-height: 70vh; }
+    .status { display: none; }
+  }
+
+
+
+  /* Fest angepinnter, einklappbarer KI-Assistent */
+  .ai-panel {
+    position: fixed;
+    top: 64px;
+    right: 18px;
+    z-index: 90;
+    width: min(560px, calc(100vw - 36px));
+    max-height: calc(100vh - 84px);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0d1117;
+    border: 1px solid #344556;
+    border-radius: 14px;
+    box-shadow: 0 18px 55px rgba(0,0,0,.55);
+  }
+  .ai-panel.open { display: flex; }
+  .ai-panel.collapsed { width: min(300px, calc(100vw - 36px)); }
+  .ai-panel.collapsed .ai-body,
+  .ai-panel.collapsed .ai-actions { display: none; }
+  .ai-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 8px 10px 8px 14px;
+    background: #151b23;
+    border-bottom: 1px solid #2a3340;
+    user-select: none;
+  }
+  .ai-head-title {
+    flex: 1;
+    cursor: pointer;
+    color: var(--accent);
+  }
+  .ai-body {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    overflow: auto;
+  }
+  .ai-context {
+    max-height: 140px;
+    overflow: auto;
+    padding: 10px;
+    white-space: pre-wrap;
+    color: #dce7ef;
+    background: #090d12;
+    border: 1px solid #293442;
+    border-radius: 9px;
+  }
+  .ai-question { min-height: 110px; resize: vertical; }
+  .ai-hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .ai-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 14px 14px;
+  }
+  @media (max-width: 700px) {
+    .ai-panel { top: 58px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 68px); }
+    .ai-panel.collapsed { width: min(280px, calc(100vw - 16px)); }
+  }
+
+
+  .import-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(5px);
+  }
+  .import-overlay.open { display: flex; }
+  .import-dialog {
+    width: min(1050px, 96vw);
+    max-height: 92vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #0d1218;
+    box-shadow: 0 24px 70px rgba(0,0,0,.55);
+  }
+  .import-head, .import-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    background: #121923;
+  }
+  .import-head { border-bottom: 1px solid var(--border); }
+  .import-actions { border-top: 1px solid var(--border); justify-content: flex-end; flex-wrap: wrap; }
+  .import-head strong { color: var(--accent); font-size: 15px; }
+  .import-head .spacer { flex: 1; }
+  .import-body {
+    min-height: 0;
+    overflow: auto;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(320px, 1.1fr) minmax(280px, .9fr);
+    gap: 14px;
+  }
+  .import-source {
+    min-height: 440px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    line-height: 1.45;
+  }
+  .import-summary {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .import-preview {
+    display: grid;
+    gap: 7px;
+  }
+  .import-preview-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #0a0f15;
+  }
+  .import-preview-type { color: var(--accent); font-size: 12px; font-weight: 750; }
+  .import-preview-text { color: var(--text); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .import-options { display: flex; gap: 14px; align-items: center; margin-right: auto; color: var(--muted); font-size: 13px; }
+  .import-options label { display: flex; align-items: center; gap: 6px; }
+  @media (max-width: 820px) {
+    .import-body { grid-template-columns: 1fr; }
+    .import-source { min-height: 300px; }
+  }
+
+
+  /* Textwerkzeuge */
+  .format-panel {
+    position: fixed;
+    top: 64px;
+    left: 18px;
+    z-index: 95;
+    width: min(520px, calc(100vw - 36px));
+    display: none;
+    overflow: hidden;
+    background: #0d1117;
+    border: 1px solid #344556;
+    border-radius: 14px;
+    box-shadow: 0 18px 55px rgba(0,0,0,.55);
+  }
+  .format-panel.open { display: block; }
+  .format-panel.collapsed .format-body { display: none; }
+  .floating-head {
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 8px 14px;
+    background: #151b23;
+    border-bottom: 1px solid var(--border);
+  }
+  .floating-title { flex: 1; color: var(--accent); font-weight: 750; cursor: pointer; }
+  .format-body { padding: 12px; }
+  .format-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
+  .format-help { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .format-swatch { display:inline-block; width:12px; height:12px; border-radius:3px; background:#fff2a8; border:1px solid #8e823e; vertical-align:-1px; }
+
+  /* Vollständiger draw.io-Editor */
+  .diagram-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: none;
+    background: #090c10;
+  }
+  .diagram-overlay.open { display: block; }
+  .diagram-dialog {
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    background: #0d1218;
+  }
+  .diagram-hostbar, .diagram-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #111923;
+    border-bottom: 1px solid var(--border);
+  }
+  .diagram-actions {
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+    justify-content: flex-end;
+  }
+  .diagram-title-input { min-width: 220px; flex: 1; max-width: 520px; }
+  .diagram-title-input input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #090d12;
+    color: var(--text);
+    padding: 8px 10px;
+  }
+  .diagram-frame-wrap { position: relative; min-height: 0; background: white; }
+  #drawioFrame { width: 100%; height: 100%; border: 0; display: block; background: white; color-scheme: only light; forced-color-adjust: none; }
+  .diagram-save-state { color: #b8c6d4; font-size: 12px; white-space: nowrap; }
+  .diagram-save-state.saved { color: #7ee2a8; }
+  .diagram-save-state.saving { color: #ffd58a; }
+  .diagram-save-state.error { color: #ff9ca8; }
+  .diagram-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #111923;
+    color: var(--text);
+    z-index: 2;
+    font-weight: 650;
+  }
+  .diagram-loading.hidden { display: none; }
+  .diagram-tip { color: var(--muted); font-size: 12px; margin-right: auto; }
+  .diagram-offline-note { color: #ffd58a; font-size: 12px; }
+  .doc-inline-highlight { background: #fff2a8; padding: 0 .5mm; }
+  .doc-inline-code { font-family: Consolas, monospace; background:#eef1f4; border:1px solid #d4dae0; border-radius:2px; padding:0 .7mm; font-size:.92em; }
+  .doc-diagram { width:100%; max-height:150mm; object-fit:contain; display:block; margin:2mm auto 4mm; }
+  .diagram-placeholder { border:1px dashed #8b949e; padding:8mm; text-align:center; color:#606a74; }
+
+  @media (max-width: 700px) {
+    .format-panel { top: 58px; left: 8px; width: calc(100vw - 16px); }
+    .diagram-dialog { width: 100%; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 0; }
+    html, body { background: white; overflow: visible; }
+    .topbar, .editor-pane, .start-overlay, .toast, .format-panel, .diagram-overlay, .ai-panel { display: none !important; }
+    .app, .workspace, .preview-pane { display: block; height: auto; overflow: visible; padding: 0; background: white; }
+    .pages { display: block; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      break-after: page;
+      page-break-after: always;
+    }
+    .page:last-child { break-after: auto; page-break-after: auto; }
+  }
+</style>
+
+<style id="v12-theme">
+  .dashboard-dialog { width:min(980px, calc(100vw - 32px)); max-width:none; padding:36px; }
+  .dashboard-top { display:grid; grid-template-columns:1fr auto; gap:28px; align-items:start; margin-bottom:28px; }
+  .dashboard-kicker, .guide-kicker { display:block; color:#0066cc; font-size:12px; font-weight:600; letter-spacing:.12em; margin-bottom:8px; }
+  .dashboard-top h1 { margin:0 0 10px; max-width:720px; }
+  .dashboard-top p { margin:0; max-width:720px; }
+  .today-card { min-width:190px; padding:18px 20px; background:#f5f5f7; border:1px solid #e0e0e0; border-radius:18px; }
+  .today-card span { display:block; color:#7a7a7a; font-size:12px; margin-bottom:6px; }
+  .today-card strong { display:block; color:#1d1d1f; font-size:15px; line-height:1.35; }
+  .dashboard-subject-card { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,360px); gap:20px; align-items:end; margin-bottom:18px; padding:20px; background:#fafafc; border:1px solid #e0e0e0; border-radius:18px; }
+  .dashboard-subject-card label { display:block; color:#1d1d1f; font-size:17px; font-weight:600; line-height:1.35; }
+  .dashboard-subject-card select { width:100%; min-height:44px; padding:10px 14px; border:1px solid rgba(0,0,0,.12); border-radius:11px; background:#fff; color:#1d1d1f; font:inherit; }
+  .dashboard-subject-card select:focus { border-color:#0071e3; outline:2px solid rgba(0,113,227,.18); }
+  .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .dashboard-action { display:flex; gap:16px; align-items:center; min-height:104px; padding:20px; text-align:left; background:#fff; border:1px solid #e0e0e0; border-radius:18px; color:#1d1d1f; cursor:pointer; transition:transform .12s ease,border-color .12s ease,background .12s ease; }
+  .dashboard-action:hover { border-color:#0066cc; }
+  .dashboard-action:active { transform:scale(.98); }
+  .dashboard-action:focus-visible { outline:2px solid #0071e3; outline-offset:2px; }
+  .dashboard-action.primary-action { background:#0066cc; color:#fff; border-color:#0066cc; }
+  .dashboard-icon { display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px; border-radius:50%; background:#f5f5f7; color:#0066cc; font-size:22px; font-weight:600; }
+  .primary-action .dashboard-icon { background:rgba(255,255,255,.18); color:#fff; }
+  .dashboard-action strong, .dashboard-action small { display:block; }
+  .dashboard-action strong { font-size:17px; font-weight:600; margin-bottom:5px; }
+  .dashboard-action small { font-size:14px; line-height:1.35; color:#7a7a7a; }
+  .primary-action small { color:rgba(255,255,255,.78); }
+  .dashboard-footer { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:22px; padding-top:20px; border-top:1px solid #e0e0e0; }
+  .dashboard-footer span { color:#7a7a7a; font-size:13px; margin-right:auto; }
+  .dashboard-footer button:disabled { opacity:.45; cursor:not-allowed; }
+  .guide-card { background:#fafafc; }
+  .guide-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+  .guide-heading .section-title { margin:0; }
+  .guide-content { margin-top:18px; color:#333; font-size:15px; line-height:1.5; }
+  .guide-content ol { margin:0; padding-left:22px; }
+  .guide-content li { margin:0 0 9px; padding-left:4px; }
+  .guide-tip { margin-top:14px; padding:14px 16px; border-left:3px solid #0066cc; background:#fff; border-radius:0 11px 11px 0; }
+  @media (max-width:833px) {
+    .dashboard-dialog { width:min(720px, calc(100vw - 20px)); padding:24px; max-height:calc(100vh - 20px); overflow:auto; }
+    .dashboard-top { grid-template-columns:1fr; }
+    .today-card { min-width:0; }
+    .dashboard-subject-card { grid-template-columns:1fr; align-items:stretch; }
+  }
+  @media (max-width:640px) {
+    .dashboard-grid { grid-template-columns:1fr; }
+    .dashboard-dialog { padding:20px; }
+    .dashboard-top h1 { font-size:28px; }
+    .dashboard-footer { align-items:stretch; }
+    .dashboard-footer .btn { width:100%; }
+    .dashboard-footer span { width:100%; margin:0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">Lernjournal</div>
+    <button class="btn small" id="newBtn">Neu</button>
+    <button class="btn small" id="openBtn">Öffnen</button>
+    <button class="btn small" id="importBtn">Text automatisch importieren</button>
+    <button class="btn small" id="wordImportBtn">Word importieren</button>
+    <button class="btn small primary" id="saveBtn">Projekt speichern</button>
+    <button class="btn small" id="exportBtn">HTML exportieren</button>
+    <button class="btn small" id="wordBtn">Word</button>
+    <button class="btn small" id="jpgBtn">JPG</button>
+    <button class="btn small" id="markdownBtn">Markdown</button>
+    <button class="btn small" id="printBtn">Drucken / PDF</button>
+    <button class="btn small" id="formatBtn">Textwerkzeuge</button>
+    <button class="btn small" id="diagramBtn">draw.io</button>
+    <button class="btn small" id="aiBtn">KI / ChatGPT</button>
+    <button class="btn small" id="startBtn">Startmenü</button>
+    <span class="status" id="status">Bereit</span>
+  </header>
+
+  <main class="workspace">
+    <section class="editor-pane">
+      <div class="section-card">
+        <h2 class="section-title">Dokumentkopf</h2>
+        <div class="meta-grid">
+          <div class="field full">
+            <label for="docTitle">Dokumenttitel</label>
+            <input id="docTitle" placeholder="z. B. Datenbanken">
+          </div>
+          <div class="field">
+            <label for="docSubject">Fach / Kopfzeile links</label>
+            <select id="docSubject" aria-label="Fach auswählen">
+              <option value="">Fach auswählen …</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="docAuthor">Name / Kopfzeile rechts</label>
+            <input id="docAuthor" placeholder="Alexander Richter">
+          </div>
+          <div class="field full">
+            <label for="docDate">Stand</label>
+            <input id="docDate" placeholder="Stand: 19. Mai 2026">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card guide-card" id="guideCard">
+        <div class="guide-heading">
+          <div>
+            <span class="guide-kicker">KURZANLEITUNG</span>
+            <h2 class="section-title">So füllst du das Dokument aus</h2>
+          </div>
+          <button class="btn small" id="guideToggleBtn" type="button">Ausblenden</button>
+        </div>
+        <div class="guide-content" id="guideContent">
+          <ol>
+            <li><strong>Dokumentkopf:</strong> Titel und Name eintragen und das Fach aus der Liste auswählen. Das heutige Datum wird automatisch bei „Stand“ gesetzt.</li>
+            <li><strong>Struktur:</strong> Mit einer Hauptüberschrift beginnen und darunter Unterüberschriften, Texte oder Definitionen ergänzen.</li>
+            <li><strong>Inhalt:</strong> Für jeden Inhalt den passenden Block wählen. So bleiben Vorschau, Word und Markdown sauber formatiert.</li>
+            <li><strong>Speichern:</strong> Das Projekt als JSON sichern oder direkt nach Word, Markdown, JPG, HTML beziehungsweise PDF exportieren.</li>
+          </ol>
+          <div class="guide-tip"><strong>Tipp:</strong> Vorhandene Mitschriften kannst du über „Word importieren“ oder „Text automatisch importieren“ strukturiert übernehmen.</div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h2 class="section-title">Inhaltsblock hinzufügen</h2>
+        <div class="insert-bar" id="insertBar"></div>
+      </div>
+
+      <div id="blockList"></div>
+    </section>
+
+    <section class="preview-pane">
+      <div class="pages" id="pages"></div>
+    </section>
+  </main>
+</div>
+
+<div class="start-overlay" id="startOverlay">
+  <div class="start-dialog dashboard-dialog">
+    <div class="dashboard-top">
+      <div>
+        <span class="dashboard-kicker">LERNJOURNAL 13</span>
+        <h1>Was möchtest du heute erstellen?</h1>
+        <p>Wähle zuerst dein Fach und starte anschließend leer, mit einer schlanken Vorlage oder mit einem bestehenden Projekt. Ein leeres Dokument enthält weiterhin keine Inhaltsblöcke.</p>
+      </div>
+      <div class="today-card">
+        <span>Heute</span>
+        <strong id="dashboardDate">–</strong>
+      </div>
+    </div>
+
+    <div class="dashboard-subject-card">
+      <div>
+        <span class="dashboard-kicker">FACH</span>
+        <label for="dashboardSubject">Für welches Fach möchtest du das Dokument anlegen?</label>
+      </div>
+      <select id="dashboardSubject" aria-label="Fach für das neue Dokument auswählen">
+        <option value="">Fach auswählen …</option>
+      </select>
+    </div>
+
+    <div class="dashboard-grid">
+      <button class="dashboard-action primary-action" id="startNewBtn" type="button">
+        <span class="dashboard-icon">＋</span>
+        <span><strong>Leeres Dokument</strong><small>Ausgewähltes Fach und heutiges Datum, keine Inhaltsblöcke</small></span>
+      </button>
+      <button class="dashboard-action" id="templateLearningBtn" type="button">
+        <span class="dashboard-icon">L</span>
+        <span><strong>Lernskript</strong><small>Lernziel, Kapitel und Prüfung</small></span>
+      </button>
+      <button class="dashboard-action" id="templateNotesBtn" type="button">
+        <span class="dashboard-icon">M</span>
+        <span><strong>Mitschrift</strong><small>Thema, Notizen und offene Fragen</small></span>
+      </button>
+      <button class="dashboard-action" id="startOpenBtn" type="button">
+        <span class="dashboard-icon">↗</span>
+        <span><strong>Projekt öffnen</strong><small>JSON oder bearbeitbare HTML-Datei</small></span>
+      </button>
+    </div>
+
+    <div class="dashboard-footer">
+      <button class="btn" id="recoverDraftBtn" type="button">Lokalen Entwurf wiederherstellen</button>
+      <span id="draftStatus">Kein lokaler Entwurf gefunden.</span>
+      <button class="btn" id="startCloseBtn" type="button">Editor ohne Auswahl öffnen</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="import-overlay" id="importOverlay" aria-hidden="true">
+  <section class="import-dialog" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+    <div class="import-head">
+      <strong id="importTitle">Markdown oder strukturierten Text importieren</strong>
+      <span class="spacer"></span>
+      <button class="btn small icon" id="importCloseBtn" title="Schließen">×</button>
+    </div>
+    <div class="import-body">
+      <div class="field">
+        <label for="importSource">Text einfügen</label>
+        <textarea class="import-source" id="importSource" placeholder="# Hauptüberschrift&#10;&#10;Ein normaler Absatz.&#10;&#10;## Unterüberschrift&#10;&#10;* Listenpunkt&#10;* Listenpunkt&#10;&#10;| Spalte 1 | Spalte 2 |&#10;| --- | --- |&#10;| Wert 1 | Wert 2 |"></textarea>
+      </div>
+      <div>
+        <div class="import-summary" id="importSummary">Noch kein Text analysiert.</div>
+        <div class="import-preview" id="importPreview"></div>
+      </div>
+    </div>
+    <div class="import-actions">
+      <div class="import-options">
+        <label><input type="radio" name="importMode" value="replace" checked> Vorhandene Blöcke ersetzen</label>
+        <label><input type="radio" name="importMode" value="append"> Hinten anhängen</label>
+      </div>
+      <button class="btn" id="analyzeImportBtn">Analysieren</button>
+      <button class="btn primary" id="applyImportBtn" disabled>Importieren</button>
+      <button class="btn" id="cancelImportBtn">Abbrechen</button>
+    </div>
+  </section>
+</div>
+
+
+<div class="format-panel" id="formatPanel" aria-hidden="true">
+  <div class="floating-head">
+    <strong class="floating-title" id="formatHeadTitle">Textwerkzeuge</strong>
+    <button class="btn small icon" id="formatCollapseBtn" title="Einklappen">−</button>
+    <button class="btn small icon" id="formatCloseBtn" title="Schließen">×</button>
+  </div>
+  <div class="format-body">
+    <div class="format-buttons">
+      <button class="btn small" data-format="bold" title="**fett**"><strong>Fett</strong></button>
+      <button class="btn small" data-format="italic" title="*kursiv*"><em>Kursiv</em></button>
+      <button class="btn small" data-format="underline" title="Unterstreichen"><u>Unterstrichen</u></button>
+      <button class="btn small" data-format="highlight" title="Text markieren"><span class="format-swatch"></span> Markieren</button>
+      <button class="btn small" data-format="code" title="Inline-Code">&lt;Code&gt;</button>
+      <button class="btn small" data-format="bullets" title="Auswahl als Aufzählung">• Liste</button>
+      <button class="btn small" data-format="numbered" title="Auswahl nummerieren">1. Liste</button>
+      <button class="btn small" data-format="link" title="Link einfügen">Link</button>
+      <button class="btn small" data-format="clear" title="Formatierungszeichen entfernen">Formatierung löschen</button>
+    </div>
+    <div class="format-help">Text im aktiven Eingabefeld markieren und eine Funktion wählen. Die Formatierung wird in der Druckvorschau direkt angezeigt.</div>
+  </div>
+</div>
+
+<div class="diagram-overlay" id="diagramOverlay" aria-hidden="true">
+  <section class="diagram-dialog" role="dialog" aria-modal="true" aria-labelledby="diagramTitle">
+    <div class="diagram-hostbar">
+      <strong class="floating-title" id="diagramTitle">draw.io Diagrammeditor</strong>
+      <div class="diagram-title-input"><input id="diagramBlockTitle" placeholder="Überschrift des Diagramms, optional"></div>
+      <span class="diagram-save-state saved" id="diagramSaveState">Entwurf lokal gesichert</span>
+      <span class="diagram-offline-note">Internetverbindung erforderlich</span>
+      <button class="btn small" id="diagramLightBtn" title="draw.io ausdrücklich im hellen Modus neu laden">Heller Modus</button>
+      <button class="btn small" id="diagramTemplateBtn" title="Vorlagenauswahl in draw.io öffnen">Vorlagen</button>
+      <button class="btn small" id="diagramFitBtn" title="Diagramm einpassen">Einpassen</button>
+      <button class="btn small icon" id="diagramCloseBtn" title="Schließen">×</button>
+    </div>
+    <div class="diagram-frame-wrap">
+      <div class="diagram-loading" id="diagramLoading">draw.io wird geladen …</div>
+      <iframe id="drawioFrame" title="draw.io Diagrammeditor" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+    </div>
+    <div class="diagram-actions">
+      <span class="diagram-tip">Enthält die vollständige draw.io-Oberfläche mit Formenbibliotheken, Verbindern, Ebenen, Tabellen, UML-, Netzwerk- und ER-Diagrammen. Die Diagrammdaten werden im Lernjournal-Projekt gespeichert. Falls Brave Webseiten automatisch abdunkelt, nutze oben „Heller Modus“.</span>
+      <button class="btn" id="diagramDownloadBtn">.drawio speichern</button>
+      <button class="btn primary" id="diagramInsertBtn">In Dokument übernehmen</button>
+    </div>
+  </section>
+</div>
+
+<div class="ai-panel" id="aiPanel" aria-hidden="true">
+  <div class="ai-head">
+    <strong class="ai-head-title" id="aiHeadTitle" title="Ein- oder ausklappen">KI-Assistent</strong>
+    <button class="btn small icon" id="aiCollapseBtn" title="Einklappen" aria-label="KI-Assistent einklappen">−</button>
+    <button class="btn small icon" id="aiCloseBtn" title="Schließen" aria-label="KI-Assistent schließen">×</button>
+  </div>
+  <div class="ai-body">
+    <div class="field">
+      <label>Ausgewählter Lernblock</label>
+      <div class="ai-context" id="aiContext">Noch kein Block ausgewählt.</div>
+    </div>
+    <div class="field">
+      <label for="aiQuestion">Frage an ChatGPT</label>
+      <textarea class="ai-question" id="aiQuestion" placeholder="Zum Beispiel: Erkläre mir diesen Abschnitt einfacher und gib mir ein Prüfungsbeispiel."></textarea>
+    </div>
+    <div class="ai-hint">Der Editor öffnet ChatGPT in einem neuen Tab und kopiert den vollständigen Prompt in die Zwischenablage. Eine echte ChatGPT-Webseite kann aus Sicherheitsgründen nicht zuverlässig direkt in diese lokale HTML-Datei eingebettet werden.</div>
+  </div>
+  <div class="ai-actions">
+    <button class="btn primary" id="askChatGPTBtn">Prompt kopieren und ChatGPT öffnen</button>
+    <button class="btn" id="copyPromptBtn">Nur Prompt kopieren</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json,.html,.htm,application/json,text/html" hidden>
+<input type="file" id="wordFileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'lernjournal-editor-v1';
+  const DRAWIO_DRAFT_KEY = 'lernjournal-drawio-draft-v1';
+  const TYPE_LABELS = {
+    h1: 'Hauptüberschrift',
+    h2: 'Unterüberschrift',
+    paragraph: 'Fließtext',
+    bullets: 'Aufzählung',
+    numbered: 'Nummerierte Liste',
+    definition: 'Definition',
+    merksatz: 'Merksatz',
+    example: 'Beispiel',
+    code: 'Code / SQL',
+    table: 'Tabelle',
+    qa: 'Prüfungsfrage + Lösung',
+    pagebreak: 'Seitenumbruch',
+    diagram: 'Diagramm / Zeichnung'
+  };
+
+  const QUICK_TYPES = ['h1','h2','paragraph','bullets','definition','merksatz','code','table','qa','pagebreak'];
+
+  const SUBJECTS = [
+    'Allgemeine Wirtschaftslehre',
+    'Betriebssystem 1',
+    'Betriebssystem 2',
+    'C-Sharp',
+    'Datenbanken',
+    'Deutsch Textformatierung',
+    'Datenverarbeitungsgrundlagen',
+    'Englisch',
+    'Elektrotechnik',
+    'Kaufmännisches Rechnen',
+    'Mathe',
+    'Boolesche Logik',
+    'Netzwerk',
+    'Rechnungswesen',
+    'TKP',
+    'WISO'
+  ];
+
+  let state = createBlankState();
+  let renderTimer = null;
+  let toastTimer = null;
+  let selectedBlockId = null;
+  let parsedImportBlocks = [];
+  let lastActiveTextInput = null;
+  let drawioXml = '';
+  let drawioTargetBlockId = null;
+  let drawioReady = false;
+  let drawioPendingAction = null;
+  let drawioDirty = false;
+  let drawioLastSavedAt = 0;
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    docTitle: $('docTitle'), docSubject: $('docSubject'), docAuthor: $('docAuthor'), docDate: $('docDate'), dashboardSubject: $('dashboardSubject'),
+    insertBar: $('insertBar'), blockList: $('blockList'), pages: $('pages'), status: $('status'),
+    fileInput: $('fileInput'), wordFileInput: $('wordFileInput'), startOverlay: $('startOverlay'), toast: $('toast'),
+    previewPane: document.querySelector('.preview-pane'), aiPanel: $('aiPanel'), aiContext: $('aiContext'), aiQuestion: $('aiQuestion'),
+    importOverlay: $('importOverlay'), importSource: $('importSource'), importSummary: $('importSummary'), importPreview: $('importPreview'), applyImportBtn: $('applyImportBtn'),
+    formatPanel: $('formatPanel'), diagramOverlay: $('diagramOverlay'), drawioFrame: $('drawioFrame'), diagramLoading: $('diagramLoading'), diagramBlockTitle: $('diagramBlockTitle'), diagramSaveState: $('diagramSaveState')
+  };
+
+  function todayLabel() {
+    return 'Stand: ' + new Intl.DateTimeFormat('de-DE', {day:'2-digit', month:'long', year:'numeric'}).format(new Date());
+  }
+
+  function createBlankState(subject = '') {
+    return {
+      version: 14,
+      title: '',
+      subject: String(subject || ''),
+      author: '',
+      date: todayLabel(),
+      blocks: []
+    };
+  }
+
+  function createTemplateState(kind, subject = '') {
+    const base = createBlankState(subject);
+    if (kind === 'learning') {
+      base.blocks = [
+        { id: uid(), type: 'h1', title: '', content: 'Thema des Lernskripts', extra: '' },
+        { id: uid(), type: 'definition', title: 'Lernziel', content: '', extra: '' },
+        { id: uid(), type: 'h2', title: '', content: '1. Kerngrundlagen', extra: '' },
+        { id: uid(), type: 'paragraph', title: '', content: '', extra: '' },
+        { id: uid(), type: 'merksatz', title: 'Merksatz', content: '', extra: '' },
+        { id: uid(), type: 'qa', title: 'Prüfungsfrage', content: '', extra: '' }
+      ];
+    } else if (kind === 'notes') {
+      base.blocks = [
+        { id: uid(), type: 'h1', title: '', content: 'Unterrichtsthema', extra: '' },
+        { id: uid(), type: 'paragraph', title: '', content: 'Dozent / Unterrichtseinheit:', extra: '' },
+        { id: uid(), type: 'h2', title: '', content: 'Notizen', extra: '' },
+        { id: uid(), type: 'paragraph', title: '', content: '', extra: '' },
+        { id: uid(), type: 'h2', title: '', content: 'Offene Fragen', extra: '' },
+        { id: uid(), type: 'bullets', title: '', content: '', extra: '' },
+        { id: uid(), type: 'merksatz', title: 'Wichtig', content: '', extra: '' }
+      ];
+    }
+    return base;
+  }
+
+  function uid() {
+    return 'b-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  function toast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+  }
+
+  function setStatus(message) {
+    els.status.textContent = message;
+  }
+
+  function populateSubjectSelect(select) {
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">Fach auswählen …</option>' + SUBJECTS
+      .map(subject => `<option value="${escapeHTML(subject)}">${escapeHTML(subject)}</option>`)
+      .join('');
+    if (SUBJECTS.includes(current)) select.value = current;
+  }
+
+  function setSubjectSelectValue(select, value) {
+    if (!select) return;
+    const subject = String(value || '');
+    const existingCustom = select.querySelector('option[data-custom="true"]');
+    if (existingCustom) existingCustom.remove();
+    if (subject && !SUBJECTS.includes(subject)) {
+      const option = document.createElement('option');
+      option.value = subject;
+      option.textContent = subject + ' (aus Projektdatei)';
+      option.dataset.custom = 'true';
+      select.appendChild(option);
+    }
+    select.value = subject;
+  }
+
+  function hydrateInputs() {
+    els.docTitle.value = state.title || '';
+    setSubjectSelectValue(els.docSubject, state.subject || '');
+    setSubjectSelectValue(els.dashboardSubject, state.subject || '');
+    els.docAuthor.value = state.author || '';
+    els.docDate.value = state.date || '';
+  }
+
+  function renderInsertBar() {
+    els.insertBar.innerHTML = '';
+    QUICK_TYPES.forEach(type => {
+      const btn = document.createElement('button');
+      btn.className = 'btn small';
+      btn.textContent = '+ ' + TYPE_LABELS[type];
+      btn.addEventListener('click', () => addBlock(type));
+      els.insertBar.appendChild(btn);
+    });
+  }
+
+  function renderEditor() {
+    els.blockList.innerHTML = '';
+    if (!state.blocks.length) {
+      els.blockList.innerHTML = '<div class="empty-state">Noch keine Inhaltsblöcke vorhanden.</div>';
+      return;
+    }
+
+    state.blocks.forEach((block, index) => {
+      const card = document.createElement('article');
+      card.className = 'block-card' + (block.id === selectedBlockId ? ' active' : '');
+      card.dataset.id = block.id;
+
+      const options = Object.entries(TYPE_LABELS)
+        .map(([value,label]) => `<option value="${value}" ${value === block.type ? 'selected' : ''}>${label}</option>`).join('');
+
+      card.innerHTML = `
+        <div class="block-head">
+          <select class="block-type" data-action="type">${options}</select>
+          <div class="block-actions">
+            <button class="btn small icon" data-action="up" title="Nach oben">↑</button>
+            <button class="btn small icon" data-action="down" title="Nach unten">↓</button>
+            <button class="btn small icon" data-action="duplicate" title="Duplizieren">⧉</button>
+            <button class="btn small icon danger" data-action="delete" title="Löschen">×</button>
+          </div>
+        </div>
+        <div class="block-body"></div>`;
+
+      const body = card.querySelector('.block-body');
+      buildBlockFields(body, block);
+
+      card.addEventListener('click', (event) => {
+        selectBlock(block.id, true);
+        const action = event.target.dataset.action;
+        if (!action || action === 'type') return;
+        if (action === 'up') moveBlock(index, -1);
+        if (action === 'down') moveBlock(index, 1);
+        if (action === 'duplicate') duplicateBlock(index);
+        if (action === 'delete') deleteBlock(index);
+      });
+      card.addEventListener('focusin', () => selectBlock(block.id, true));
+
+      card.querySelector('[data-action="type"]').addEventListener('change', (event) => {
+        block.type = event.target.value;
+        setDefaultsForType(block);
+        renderEditor();
+        changed();
+      });
+
+      els.blockList.appendChild(card);
+    });
+  }
+
+  function fieldHTML(label, value, key, multiline = false, placeholder = '') {
+    const control = multiline
+      ? `<textarea data-key="${key}" placeholder="${escapeHTML(placeholder)}">${escapeHTML(value)}</textarea>`
+      : `<input data-key="${key}" value="${escapeHTML(value)}" placeholder="${escapeHTML(placeholder)}">`;
+    return `<div class="field"><label>${label}</label>${control}</div>`;
+  }
+
+  function buildBlockFields(container, block) {
+    switch (block.type) {
+      case 'h1':
+      case 'h2':
+        container.innerHTML = fieldHTML('Überschrift', block.content, 'content', false, 'Überschrift eingeben');
+        break;
+      case 'paragraph':
+        container.innerHTML = fieldHTML('Text', block.content, 'content', true, 'Fließtext eingeben');
+        break;
+      case 'bullets':
+      case 'numbered':
+        container.innerHTML = fieldHTML('Ein Punkt pro Zeile', block.content, 'content', true, 'Erster Punkt\nZweiter Punkt');
+        break;
+      case 'definition':
+      case 'merksatz':
+      case 'example':
+        container.innerHTML = fieldHTML('Bezeichnung', block.title, 'title', false, TYPE_LABELS[block.type]) +
+          fieldHTML('Inhalt', block.content, 'content', true, 'Inhalt eingeben');
+        break;
+      case 'code':
+        container.innerHTML = fieldHTML('Überschrift, optional', block.title, 'title', false, 'z. B. SELECT') +
+          fieldHTML('Code', block.content, 'content', true, 'SELECT *\nFROM produkt;');
+        break;
+      case 'table':
+        container.innerHTML = fieldHTML('Überschrift, optional', block.title, 'title', false, 'z. B. Tabelle Kunde') +
+          fieldHTML('Tabelleninhalt', block.content, 'content', true, 'Spalten mit Tabulator trennen.\nZeilen mit Enter trennen.');
+        break;
+      case 'qa':
+        container.innerHTML = fieldHTML('Aufgabe / Überschrift', block.title, 'title', false, 'Aufgabe 1') +
+          fieldHTML('Frage', block.content, 'content', true, 'Aufgabenstellung') +
+          fieldHTML('Lösung', block.extra, 'extra', true, 'Musterlösung');
+        break;
+      case 'diagram':
+        container.innerHTML = fieldHTML('Überschrift, optional', block.title, 'title', false, 'z. B. Datenbankstruktur') +
+          '<div class="empty-state">Diagramm ist eingebettet. Über das Diagrammboard kann eine neue Version erstellt werden.</div>';
+        break;
+      case 'pagebreak':
+        container.innerHTML = '<div class="empty-state">An dieser Stelle beginnt in der Vorschau eine neue Seite.</div>';
+        break;
+    }
+
+    container.querySelectorAll('[data-key]').forEach(input => {
+      input.addEventListener('focus', () => { lastActiveTextInput = input; });
+      input.addEventListener('click', () => { lastActiveTextInput = input; });
+      input.addEventListener('input', () => {
+        block[input.dataset.key] = input.value;
+        changed(false);
+      });
+    });
+  }
+
+  function setDefaultsForType(block) {
+    if (block.type === 'definition' && !block.title) block.title = 'Definition';
+    if (block.type === 'merksatz' && !block.title) block.title = 'Merksatz';
+    if (block.type === 'example' && !block.title) block.title = 'Beispiel';
+    if (block.type === 'qa' && !block.title) block.title = 'Aufgabe';
+  }
+
+  function addBlock(type) {
+    const block = { id: uid(), type, title: '', content: '', extra: '' };
+    setDefaultsForType(block);
+    state.blocks.push(block);
+    renderEditor();
+    changed();
+    setTimeout(() => {
+      const card = els.blockList.lastElementChild;
+      const input = card?.querySelector('input,textarea');
+      input?.focus();
+      card?.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 0);
+  }
+
+  function moveBlock(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= state.blocks.length) return;
+    [state.blocks[index], state.blocks[target]] = [state.blocks[target], state.blocks[index]];
+    renderEditor();
+    changed();
+  }
+
+  function duplicateBlock(index) {
+    const copy = structuredClone(state.blocks[index]);
+    copy.id = uid();
+    state.blocks.splice(index + 1, 0, copy);
+    renderEditor();
+    changed();
+  }
+
+  function deleteBlock(index) {
+    state.blocks.splice(index, 1);
+    renderEditor();
+    changed();
+  }
+
+  function selectBlock(blockId, scrollPreview = false) {
+    selectedBlockId = blockId;
+    document.querySelectorAll('.block-card').forEach(card => card.classList.toggle('active', card.dataset.id === blockId));
+    updateAIContext();
+    if (scrollPreview) {
+      renderPreview();
+      requestAnimationFrame(() => scrollToPreviewBlock(blockId));
+    }
+  }
+
+  function scrollToPreviewBlock(blockId) {
+    els.pages.querySelectorAll('[data-block-id]').forEach(node => node.classList.remove('preview-active'));
+    const target = els.pages.querySelector(`[data-block-id="${CSS.escape(blockId)}"]`);
+    if (!target) return;
+    target.classList.add('preview-active');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    setTimeout(() => target.classList.remove('preview-active'), 1800);
+  }
+
+  function selectedBlock() {
+    return state.blocks.find(block => block.id === selectedBlockId) || null;
+  }
+
+  function updateAIContext() {
+    const block = selectedBlock();
+    if (!block) { els.aiContext.textContent = 'Noch kein Block ausgewählt.'; return; }
+    const parts = [TYPE_LABELS[block.type] || block.type];
+    if (block.title) parts.push('Titel: ' + block.title);
+    if (block.content) parts.push(block.content);
+    if (block.extra) parts.push('Lösung/Zusatz: ' + block.extra);
+    els.aiContext.textContent = parts.join('\n\n');
+  }
+
+  function buildAIPrompt() {
+    const block = selectedBlock();
+    const context = block ? els.aiContext.textContent : 'Kein einzelner Block ausgewählt. Beziehe dich auf das gesamte Thema: ' + (state.title || 'Lernskript');
+    const question = els.aiQuestion.value.trim() || 'Erkläre mir diesen Inhalt verständlich, fachlich korrekt und mit einem konkreten Prüfungsbeispiel.';
+    return `Ich erstelle ein Lernskript zum Thema „${state.title || state.subject || 'unbekannt'}“.\n\nAusgewählter Inhalt:\n${context}\n\nMeine Frage:\n${question}\n\nAntworte auf Deutsch, klar strukturiert und so, dass ich die Antwort direkt als Lernblock übernehmen kann.`;
+  }
+
+  async function copyAIPrompt(openChat = false) {
+    const prompt = buildAIPrompt();
+    try {
+      await navigator.clipboard.writeText(prompt);
+      toast('Prompt wurde kopiert');
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = prompt;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      toast('Prompt wurde kopiert');
+    }
+    if (openChat) window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer');
+  }
+
+
+  function cleanInlineMarkdown(text) {
+    return String(text || '')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\\([#*_`|>~-])/g, '$1')
+      .trim();
+  }
+
+  function isMarkdownTableSeparator(line) {
+    const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(x => x.trim());
+    return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+  }
+
+  function parseMarkdownTable(lines) {
+    const rows = lines
+      .filter((line, index) => !(index === 1 && isMarkdownTableSeparator(line)))
+      .map(line => line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cleanInlineMarkdown(cell.trim())));
+    return rows.map(row => row.join('\t')).join('\n');
+  }
+
+  function makeImportedBlock(type, content = '', title = '', extra = '') {
+    const block = { id: uid(), type, title, content, extra };
+    setDefaultsForType(block);
+    return block;
+  }
+
+  function normalizeLabel(line) {
+    return cleanInlineMarkdown(line).replace(/:$/, '').trim().toLowerCase();
+  }
+
+  function labelType(line) {
+    const label = normalizeLabel(line);
+    if (['merksatz','wichtig','prüfungsregel','pruefungsregel','achtung'].includes(label)) return 'merksatz';
+    if (['definition','begriff','kerndefinition'].includes(label)) return 'definition';
+    if (['beispiel','beispiele','praxisbeispiel'].includes(label)) return 'example';
+    if (['sql','code','syntax'].includes(label)) return 'code';
+    if (['vorteile','nachteile','eigenschaften','aufgaben','ziele'].includes(label)) return 'label';
+    return null;
+  }
+
+  function parseStructuredText(source) {
+    const lines = String(source || '').replace(/\r\n?/g, '\n').split('\n');
+    const blocks = [];
+    let i = 0;
+    let pendingSemantic = null;
+
+    const structural = line => {
+      const t = line.trim();
+      return !t || /^#{1,6}\s+/.test(t) || /^([-*_])\1{2,}\s*$/.test(t) || /^[-*+]\s+/.test(t) || /^\d+[.)]\s+/.test(t) || /^```/.test(t) || /^\|.*\|$/.test(t) || labelType(t);
+    };
+
+    while (i < lines.length) {
+      let line = lines[i].trim();
+      if (!line) { i++; continue; }
+      if (/^([-*_])\1{2,}\s*$/.test(line)) { i++; continue; }
+
+      const heading = line.match(/^(#{1,6})\s+(.+)$/);
+      if (heading) {
+        const text = cleanInlineMarkdown(heading[2]);
+        const semantic = labelType(text);
+        if (semantic === 'merksatz' || semantic === 'definition' || semantic === 'example' || semantic === 'code') {
+          pendingSemantic = { type: semantic, title: cleanInlineMarkdown(text).replace(/:$/, '') };
+        } else {
+          blocks.push(makeImportedBlock(heading[1].length === 1 ? 'h1' : 'h2', text));
+          pendingSemantic = null;
+        }
+        i++; continue;
+      }
+
+      const semantic = labelType(line);
+      if (semantic) {
+        const title = cleanInlineMarkdown(line).replace(/:$/, '');
+        if (semantic === 'label') blocks.push(makeImportedBlock('paragraph', title + ':'));
+        else pendingSemantic = { type: semantic, title };
+        i++; continue;
+      }
+
+      if (/^```/.test(line)) {
+        const language = line.replace(/^```/, '').trim();
+        const code = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i].trim())) code.push(lines[i++]);
+        if (i < lines.length) i++;
+        blocks.push(makeImportedBlock('code', code.join('\n'), pendingSemantic?.title || language));
+        pendingSemantic = null;
+        continue;
+      }
+
+      if (/^\|.*\|$/.test(line) && i + 1 < lines.length && isMarkdownTableSeparator(lines[i + 1])) {
+        const tableLines = [];
+        while (i < lines.length && /^\|.*\|$/.test(lines[i].trim())) tableLines.push(lines[i++].trim());
+        blocks.push(makeImportedBlock('table', parseMarkdownTable(tableLines), pendingSemantic?.title || ''));
+        pendingSemantic = null;
+        continue;
+      }
+
+      if (/^[-*+]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
+          items.push(cleanInlineMarkdown(lines[i].trim().replace(/^[-*+]\s+/, '')));
+          i++;
+        }
+        blocks.push(makeImportedBlock('bullets', items.join('\n')));
+        continue;
+      }
+
+      if (/^\d+[.)]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\d+[.)]\s+/.test(lines[i].trim())) {
+          items.push(cleanInlineMarkdown(lines[i].trim().replace(/^\d+[.)]\s+/, '')));
+          i++;
+        }
+        blocks.push(makeImportedBlock('numbered', items.join('\n')));
+        continue;
+      }
+
+      if (/^>\s?/.test(line)) {
+        const quotes = [];
+        while (i < lines.length && /^>\s?/.test(lines[i].trim())) quotes.push(cleanInlineMarkdown(lines[i++].trim().replace(/^>\s?/, '')));
+        blocks.push(makeImportedBlock('merksatz', quotes.join(' '), pendingSemantic?.title || 'Merksatz'));
+        pendingSemantic = null;
+        continue;
+      }
+
+      const paragraph = [];
+      while (i < lines.length && lines[i].trim() && !structural(lines[i])) {
+        paragraph.push(cleanInlineMarkdown(lines[i].trim()));
+        i++;
+      }
+      if (!paragraph.length) {
+        paragraph.push(cleanInlineMarkdown(line));
+        i++;
+      }
+      const content = paragraph.join(' ');
+      if (pendingSemantic) {
+        blocks.push(makeImportedBlock(pendingSemantic.type, content, pendingSemantic.title));
+        pendingSemantic = null;
+      } else {
+        blocks.push(makeImportedBlock('paragraph', content));
+      }
+    }
+
+    if (pendingSemantic) blocks.push(makeImportedBlock(pendingSemantic.type, '', pendingSemantic.title));
+    return blocks.filter(block => block.type === 'pagebreak' || block.content.trim() || block.title.trim() || block.extra.trim());
+  }
+
+  function importBlockPreviewText(block) {
+    const text = [block.title, block.content, block.extra].filter(Boolean).join(' — ');
+    return text.length > 180 ? text.slice(0, 177) + '…' : text;
+  }
+
+  function analyzeImport() {
+    parsedImportBlocks = parseStructuredText(els.importSource.value);
+    const counts = {};
+    parsedImportBlocks.forEach(block => counts[block.type] = (counts[block.type] || 0) + 1);
+    els.importSummary.textContent = parsedImportBlocks.length
+      ? `${parsedImportBlocks.length} Blöcke erkannt: ` + Object.entries(counts).map(([type,count]) => `${count}× ${TYPE_LABELS[type]}`).join(', ')
+      : 'Es konnten keine verwertbaren Inhaltsblöcke erkannt werden.';
+    els.importPreview.innerHTML = '';
+    parsedImportBlocks.forEach(block => {
+      const row = document.createElement('div');
+      row.className = 'import-preview-row';
+      row.innerHTML = `<div class="import-preview-type">${escapeHTML(TYPE_LABELS[block.type] || block.type)}</div><div class="import-preview-text">${escapeHTML(importBlockPreviewText(block))}</div>`;
+      els.importPreview.appendChild(row);
+    });
+    els.applyImportBtn.disabled = parsedImportBlocks.length === 0;
+  }
+
+  function openImportDialog() {
+    parsedImportBlocks = [];
+    els.importSummary.textContent = 'Noch kein Text analysiert.';
+    els.importPreview.innerHTML = '';
+    els.applyImportBtn.disabled = true;
+    els.importOverlay.classList.add('open');
+    els.importOverlay.setAttribute('aria-hidden', 'false');
+    setTimeout(() => els.importSource.focus(), 0);
+  }
+
+  function closeImportDialog() {
+    els.importOverlay.classList.remove('open');
+    els.importOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function applyImport() {
+    if (!parsedImportBlocks.length) analyzeImport();
+    if (!parsedImportBlocks.length) return;
+    const mode = document.querySelector('input[name="importMode"]:checked')?.value || 'replace';
+    state.blocks = mode === 'append' ? [...state.blocks, ...parsedImportBlocks] : parsedImportBlocks;
+    selectedBlockId = state.blocks[0]?.id || null;
+    renderEditor();
+    renderPreview();
+    saveAutosave();
+    updateAIContext();
+    closeImportDialog();
+    toast(`${parsedImportBlocks.length} Blöcke importiert`);
+  }
+
+
+  function loadMammothLibrary() {
+    if (window.mammoth) return Promise.resolve(window.mammoth);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js';
+      script.onload = () => window.mammoth ? resolve(window.mammoth) : reject(new Error('Word-Importbibliothek konnte nicht geladen werden.'));
+      script.onerror = () => reject(new Error('Word-Importbibliothek konnte nicht geladen werden. Internetverbindung prüfen.'));
+      document.head.appendChild(script);
+    });
+  }
+
+  function inlineNodeToMarkdown(node) {
+    if (!node) return '';
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName.toLowerCase();
+    const inner = Array.from(node.childNodes).map(inlineNodeToMarkdown).join('');
+    if (tag === 'strong' || tag === 'b') return `**${inner}**`;
+    if (tag === 'em' || tag === 'i') return `*${inner}*`;
+    if (tag === 'u') return `<u>${inner}</u>`;
+    if (tag === 'code') return `\`${inner}\``;
+    if (tag === 'a') return `[${inner}](${node.getAttribute('href') || ''})`;
+    if (tag === 'br') return '\n';
+    return inner;
+  }
+
+  function htmlTableToText(table) {
+    return Array.from(table.rows).map(row => Array.from(row.cells).map(cell => {
+      return inlineNodeToMarkdown(cell).replace(/\s+/g, ' ').trim();
+    }).join('\t')).join('\n');
+  }
+
+  function blocksFromWordHtml(html) {
+    const doc = new DOMParser().parseFromString(`<div id="word-root">${html}</div>`, 'text/html');
+    const root = doc.getElementById('word-root');
+    const blocks = [];
+    let listBuffer = null;
+
+    const flushList = () => {
+      if (!listBuffer) return;
+      blocks.push(makeImportedBlock(listBuffer.type, listBuffer.items.join('\n')));
+      listBuffer = null;
+    };
+
+    const pushParagraph = (type, element, title = '') => {
+      flushList();
+      const text = inlineNodeToMarkdown(element).replace(/\u00a0/g, ' ').replace(/[ \t]+\n/g, '\n').trim();
+      if (text) blocks.push(makeImportedBlock(type, text, title));
+    };
+
+    Array.from(root.children).forEach(element => {
+      const tag = element.tagName.toLowerCase();
+      if (/^h[1-6]$/.test(tag)) {
+        pushParagraph(tag === 'h1' ? 'h1' : 'h2', element);
+        return;
+      }
+      if (tag === 'table') {
+        flushList();
+        const text = htmlTableToText(element);
+        if (text.trim()) blocks.push(makeImportedBlock('table', text));
+        return;
+      }
+      if (tag === 'ul' || tag === 'ol') {
+        flushList();
+        const items = Array.from(element.children).filter(x => x.tagName?.toLowerCase() === 'li')
+          .map(li => inlineNodeToMarkdown(li).replace(/\s+/g, ' ').trim()).filter(Boolean);
+        if (items.length) blocks.push(makeImportedBlock(tag === 'ol' ? 'numbered' : 'bullets', items.join('\n')));
+        return;
+      }
+      if (tag === 'p') {
+        const text = inlineNodeToMarkdown(element).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!text) { flushList(); return; }
+        const cls = (element.getAttribute('class') || '').toLowerCase();
+        const style = (element.getAttribute('style') || '').toLowerCase();
+        const semantic = labelType(text);
+        if (semantic && semantic !== 'label') {
+          flushList();
+          blocks.push(makeImportedBlock(semantic, '', cleanInlineMarkdown(text).replace(/:$/, '')));
+          return;
+        }
+        if (/heading|überschrift|uberschrift|title/.test(cls)) {
+          pushParagraph(/1|title/.test(cls) ? 'h1' : 'h2', element);
+          return;
+        }
+        if (/list/.test(cls) || /mso-list/.test(style)) {
+          const ordered = /^\s*\d+[.)]/.test(text);
+          const clean = text.replace(/^\s*(?:[•·▪◦-]|\d+[.)])\s*/, '');
+          const type = ordered ? 'numbered' : 'bullets';
+          if (!listBuffer || listBuffer.type !== type) { flushList(); listBuffer = {type, items: []}; }
+          listBuffer.items.push(clean);
+          return;
+        }
+        pushParagraph('paragraph', element);
+        return;
+      }
+      pushParagraph('paragraph', element);
+    });
+    flushList();
+
+    for (let i = 0; i < blocks.length - 1; i++) {
+      const b = blocks[i];
+      if (['definition','merksatz','example'].includes(b.type) && !b.content.trim() && blocks[i+1]?.type === 'paragraph') {
+        b.content = blocks[i+1].content;
+        blocks.splice(i+1, 1);
+      }
+    }
+    return blocks.filter(b => b.content.trim() || b.title.trim() || b.type === 'pagebreak');
+  }
+
+  async function importWordFile(file) {
+    if (!file) return;
+    setStatus('Word-Dokument wird analysiert …');
+    try {
+      const mammothLib = await loadMammothLibrary();
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammothLib.convertToHtml({ arrayBuffer }, {
+        styleMap: [
+          "p[style-name='Title'] => h1:fresh",
+          "p[style-name='Titel'] => h1:fresh",
+          "p[style-name='Heading 1'] => h1:fresh",
+          "p[style-name='Überschrift 1'] => h1:fresh",
+          "p[style-name='Heading 2'] => h2:fresh",
+          "p[style-name='Überschrift 2'] => h2:fresh",
+          "p[style-name='Heading 3'] => h3:fresh",
+          "p[style-name='Überschrift 3'] => h3:fresh"
+        ],
+        includeDefaultStyleMap: true
+      });
+      const imported = blocksFromWordHtml(result.value);
+      if (!imported.length) throw new Error('Im Word-Dokument wurden keine verwertbaren Inhalte erkannt.');
+      state.blocks = imported;
+      selectedBlockId = imported[0]?.id || null;
+      if (!state.title.trim()) {
+        const firstHeading = imported.find(b => b.type === 'h1' && b.content.trim());
+        if (firstHeading) state.title = cleanInlineMarkdown(firstHeading.content);
+      }
+      hydrateInputs();
+      renderEditor();
+      renderPreview();
+      saveAutosave();
+      updateAIContext();
+      const warningCount = result.messages?.length || 0;
+      setStatus('Word-Dokument importiert');
+      toast(`${imported.length} Blöcke aus Word importiert${warningCount ? ` · ${warningCount} Hinweise` : ''}`);
+    } catch (error) {
+      console.error(error);
+      setStatus('Word-Import fehlgeschlagen');
+      alert('Word-Import fehlgeschlagen:\n\n' + (error?.message || error));
+    } finally {
+      els.wordFileInput.value = '';
+    }
+  }
+
+  function changed(immediateEditor = true) {
+    setStatus('Änderungen werden gespeichert …');
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => {
+      saveAutosave();
+      renderPreview();
+      setStatus('Automatisch lokal gespeichert');
+    }, 160);
+  }
+
+  function saveAutosave() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (err) { console.warn('Autosave fehlgeschlagen', err); }
+  }
+
+  function loadAutosave() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      state = normalizeState(parsed);
+      return true;
+    } catch (err) {
+      console.warn('Autosave konnte nicht geladen werden', err);
+      return false;
+    }
+  }
+
+  function normalizeState(data) {
+    return {
+      version: 14,
+      title: String(data?.title ?? ''),
+      subject: String(data?.subject ?? ''),
+      author: String(data?.author ?? ''),
+      date: String(data?.date ?? ''),
+      blocks: Array.isArray(data?.blocks) ? data.blocks.map(b => ({
+        id: b.id || uid(),
+        type: TYPE_LABELS[b.type] ? b.type : 'paragraph',
+        title: String(b.title ?? ''),
+        content: String(b.content ?? ''),
+        extra: String(b.extra ?? '')
+      })) : []
+    };
+  }
+
+  function createPage(kind = 'normal') {
+    const page = document.createElement('section');
+    page.className = 'page ' + kind;
+    const pageNumber = els.pages.children.length + 1;
+    page.dataset.page = pageNumber;
+    page.innerHTML = `
+      <div class="page-header"><span>${escapeHTML(state.subject || '')}</span><span>${escapeHTML(state.author || '')}</span></div>
+      <div class="page-content"></div>
+      <div class="page-footer">${pageNumber}</div>`;
+    els.pages.appendChild(page);
+    return page.querySelector('.page-content');
+  }
+
+  function makeCover() {
+    const content = createPage('cover');
+    const title = document.createElement('div');
+    title.className = 'doc-title';
+    title.textContent = state.title || 'Dokumenttitel';
+    content.appendChild(title);
+    return content;
+  }
+
+  function renderInline(text) {
+    let html = escapeHTML(String(text ?? ''));
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    html = html.replace(/==(.+?)==/g, '<mark class="doc-inline-highlight">$1</mark>');
+    html = html.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, '<u>$1</u>');
+    html = html.replace(/`([^`]+)`/g, '<code class="doc-inline-code">$1</code>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    return html.replace(/\n/g, '<br>');
+  }
+
+  function blockToNode(block) {
+    if (block.type === 'pagebreak') {
+      const marker = document.createElement('div');
+      marker.dataset.pagebreak = 'true';
+      return marker;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.dataset.blockId = block.id;
+    if (block.type === 'h1' || block.type === 'h2') wrapper.dataset.heading = block.type;
+
+    const addHeading = (text, cls = 'doc-h2') => {
+      if (!text.trim()) return;
+      const h = document.createElement('div');
+      h.className = cls;
+      h.innerHTML = renderInline(text);
+      wrapper.appendChild(h);
+    };
+
+    switch (block.type) {
+      case 'h1': addHeading(block.content, 'doc-h1'); break;
+      case 'h2': addHeading(block.content, 'doc-h2'); break;
+      case 'paragraph': {
+        const p = document.createElement('div');
+        p.className = 'doc-p';
+        p.innerHTML = renderInline(block.content);
+        wrapper.appendChild(p);
+        break;
+      }
+      case 'bullets':
+      case 'numbered': {
+        const list = document.createElement(block.type === 'bullets' ? 'ul' : 'ol');
+        list.className = 'doc-list';
+        block.content.split(/\r?\n/).map(x => x.trim()).filter(Boolean).forEach(item => {
+          const li = document.createElement('li'); li.innerHTML = renderInline(item); list.appendChild(li);
+        });
+        wrapper.appendChild(list);
+        break;
+      }
+      case 'definition':
+      case 'example': {
+        addHeading(block.title || TYPE_LABELS[block.type]);
+        const p = document.createElement('div'); p.className = 'doc-p'; p.innerHTML = renderInline(block.content); wrapper.appendChild(p);
+        break;
+      }
+      case 'merksatz': {
+        const box = document.createElement('div'); box.className = 'note-box merksatz';
+        box.innerHTML = `<div class="note-title">${renderInline(block.title || 'Merksatz')}</div><div class="doc-p">${renderInline(block.content)}</div>`;
+        wrapper.appendChild(box);
+        break;
+      }
+      case 'code': {
+        addHeading(block.title || '');
+        const pre = document.createElement('pre'); pre.className = 'doc-code'; pre.innerHTML = highlightCode(block.content); wrapper.appendChild(pre);
+        break;
+      }
+      case 'table': {
+        addHeading(block.title || '');
+        wrapper.appendChild(buildTable(block.content));
+        break;
+      }
+      case 'diagram': {
+        addHeading(block.title || 'Diagramm');
+        if (block.content && block.content.startsWith('data:image/')) {
+          const image = document.createElement('img');
+          image.className = 'doc-diagram';
+          image.src = block.content;
+          image.alt = block.title || 'Diagramm';
+          wrapper.appendChild(image);
+        } else {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'diagram-placeholder';
+          placeholder.textContent = 'Kein Diagramm vorhanden';
+          wrapper.appendChild(placeholder);
+        }
+        break;
+      }
+      case 'qa': {
+        addHeading(block.title || 'Aufgabe');
+        const qa = document.createElement('div'); qa.className = 'qa-wrap';
+        qa.innerHTML = `<div class="qa-label">Frage</div><div class="qa-text">${renderInline(block.content)}</div><div class="qa-label">Lösung</div><div class="qa-text">${renderInline(block.extra)}</div>`;
+        wrapper.appendChild(qa);
+        break;
+      }
+    }
+    return wrapper;
+  }
+
+  function buildTable(text) {
+    const table = document.createElement('table');
+    table.className = 'doc-table';
+    const rows = String(text || '').split(/\r?\n/).filter(row => row.length);
+    rows.forEach((row, rowIndex) => {
+      const tr = document.createElement('tr');
+      row.split('\t').forEach(cellText => {
+        const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
+        cell.textContent = cellText;
+        tr.appendChild(cell);
+      });
+      table.appendChild(tr);
+    });
+    return table;
+  }
+
+  function highlightCode(code) {
+    const re = /(--[^\n]*)|('(?:''|[^'])*')|\b(SELECT|FROM|WHERE|BETWEEN|AND|OR|UPDATE|SET|CREATE|TABLE|ALTER|DROP|COLUMN|INSERT|INTO|VALUES|DELETE|JOIN|INNER|LEFT|RIGHT|ON|AS|PRIMARY|KEY|FOREIGN|REFERENCES|NOT|NULL|ORDER|BY|GROUP|HAVING|DISTINCT|LIMIT)\b|\b(INT|INTEGER|VARCHAR|CHAR|DECIMAL|NUMERIC|DATE|DATETIME|BOOLEAN|BOOL|TEXT)\b|\b(\d+(?:[.,]\d+)?)\b/gim;
+    let result = '', last = 0, match;
+    while ((match = re.exec(String(code || '')))) {
+      result += escapeHTML(code.slice(last, match.index));
+      const value = escapeHTML(match[0]);
+      const cls = match[1] ? 'sql-comment' : match[2] ? 'sql-string' : match[3] ? 'sql-keyword' : match[4] ? 'sql-type' : 'sql-number';
+      result += `<span class="${cls}">${value}</span>`;
+      last = re.lastIndex;
+    }
+    return result + escapeHTML(String(code || '').slice(last));
+  }
+
+  function appendPaginated(nodes, firstContent) {
+    let content = firstContent;
+    for (const sourceNode of nodes) {
+      if (sourceNode.dataset.pagebreak === 'true') {
+        content = createPage('normal');
+        continue;
+      }
+      const node = sourceNode;
+      content.appendChild(node);
+      if (content.scrollHeight > content.clientHeight + 1) {
+        content.removeChild(node);
+        content = createPage('normal');
+        content.appendChild(node);
+        if (content.scrollHeight > content.clientHeight + 1) node.classList.add('oversize-warning');
+      }
+    }
+  }
+
+  function buildTocEntries() {
+    return state.blocks
+      .filter(b => (b.type === 'h1' || b.type === 'h2') && b.content.trim())
+      .map(b => ({ id: b.id, level: b.type === 'h1' ? 1 : 2, text: b.content.trim() }));
+  }
+
+  function tocNodes(entries) {
+    const nodes = [];
+    const title = document.createElement('div');
+    title.className = 'doc-h1 toc-title';
+    title.textContent = 'Inhaltsverzeichnis';
+    nodes.push(title);
+    entries.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = `toc-entry level-${entry.level}`;
+      row.dataset.tocFor = entry.id;
+      row.innerHTML = `<span class="toc-text">${escapeHTML(entry.text)}</span><span class="toc-dots"></span><span class="toc-page">?</span>`;
+      nodes.push(row);
+    });
+    return nodes;
+  }
+
+  function renderPreview() {
+    els.pages.innerHTML = '';
+    makeCover();
+
+    const tocContent = createPage('normal');
+    const tocContentNodes = [];
+    if (state.date.trim()) {
+      const date = document.createElement('div');
+      date.className = 'doc-date';
+      date.textContent = state.date;
+      tocContentNodes.push(date);
+    }
+    tocContentNodes.push(...tocNodes(buildTocEntries()));
+    appendPaginated(tocContentNodes, tocContent);
+
+    const contentPage = createPage('normal');
+    const contentNodes = [];
+    state.blocks.forEach(block => contentNodes.push(blockToNode(block)));
+    appendPaginated(contentNodes, contentPage);
+
+    els.pages.querySelectorAll('[data-toc-for]').forEach(entry => {
+      const target = els.pages.querySelector(`[data-block-id="${CSS.escape(entry.dataset.tocFor)}"]`);
+      const page = target?.closest('.page')?.dataset.page || '?';
+      entry.querySelector('.toc-page').textContent = page;
+    });
+    if (selectedBlockId) {
+      const selected = els.pages.querySelector(`[data-block-id="${CSS.escape(selectedBlockId)}"]`);
+      if (selected) selected.classList.add('preview-active');
+    }
+  }
+
+  function openFormatPanel() {
+    els.formatPanel.classList.add('open');
+    els.formatPanel.setAttribute('aria-hidden', 'false');
+  }
+
+  function toggleFormatCollapsed() {
+    const collapsed = els.formatPanel.classList.toggle('collapsed');
+    $('formatCollapseBtn').textContent = collapsed ? '+' : '−';
+  }
+
+  function updateInputValue(input, value, caretStart, caretEnd = caretStart) {
+    input.value = value;
+    input.focus();
+    if (typeof input.setSelectionRange === 'function') input.setSelectionRange(caretStart, caretEnd);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function applyTextFormat(kind) {
+    const input = lastActiveTextInput;
+    if (!input || !document.body.contains(input)) {
+      toast('Zuerst Text in einem Lernblock markieren');
+      return;
+    }
+    const value = input.value;
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? start;
+    const selected = value.slice(start, end);
+    let replacement = selected;
+    let selectFrom = start;
+    let selectTo = start;
+
+    const wrap = (left, right = left, fallback = 'Text') => {
+      const inner = selected || fallback;
+      replacement = left + inner + right;
+      selectFrom = start + left.length;
+      selectTo = selectFrom + inner.length;
+    };
+
+    if (kind === 'bold') wrap('**');
+    else if (kind === 'italic') wrap('*');
+    else if (kind === 'underline') wrap('<u>', '</u>');
+    else if (kind === 'highlight') wrap('==');
+    else if (kind === 'code') wrap('`');
+    else if (kind === 'link') {
+      const label = selected || 'Linktext';
+      replacement = `[${label}](https://)`;
+      selectFrom = start + replacement.length - 1;
+      selectTo = selectFrom;
+    } else if (kind === 'bullets' || kind === 'numbered') {
+      const lines = (selected || 'Listenpunkt').split(/\r?\n/);
+      replacement = lines.map((line, index) => kind === 'bullets' ? `* ${line}` : `${index + 1}. ${line}`).join('\n');
+      selectFrom = start;
+      selectTo = start + replacement.length;
+    } else if (kind === 'clear') {
+      replacement = selected
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/==(.*?)==/g, '$1')
+        .replace(/`(.*?)`/g, '$1')
+        .replace(/<u>(.*?)<\/u>/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+      selectFrom = start;
+      selectTo = start + replacement.length;
+    }
+    updateInputValue(input, value.slice(0, start) + replacement + value.slice(end), selectFrom, selectTo);
+  }
+
+  const EMPTY_DRAWIO_XML = '<mxfile host="embed.diagrams.net"><diagram id="page-1" name="Page-1"><mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
+  const DRAWIO_ORIGIN = 'https://embed.diagrams.net';
+  // configure=1 erlaubt eine zusätzliche, feste Licht-Konfiguration per postMessage.
+  // dark=0 setzt den offiziellen hellen Darstellungsmodus; noExitBtn=1 verhindert ein versehentliches Schließen.
+  const DRAWIO_URL = DRAWIO_ORIGIN + '/?embed=1&proto=json&configure=1&spin=1&libraries=1&saveAndExit=0&noExitBtn=1&ui=kennedy&dark=0&lang=de';
+  const DRAWIO_LIGHT_CONFIG = {
+    enableCssDarkMode: false,
+    enableLightDarkColors: false,
+    defaultAdaptiveColors: 'none',
+    darkColor: '#ffffff',
+    css: `
+      :root, html, body { color-scheme: only light !important; forced-color-adjust: none !important; }
+      html, body, .geEditor, .geDiagramContainer, .geBackgroundPage { filter: none !important; }
+      .geMenubarContainer, .geToolbarContainer, .geSidebarContainer, .geFormatContainer,
+      .geFooterContainer, .geHsplit, .geVsplit { color-scheme: only light !important; }
+    `
+  };
+
+  function setDiagramSaveState(text, kind = 'saved') {
+    if (!els.diagramSaveState) return;
+    els.diagramSaveState.textContent = text;
+    els.diagramSaveState.className = 'diagram-save-state ' + kind;
+  }
+
+  function persistDrawioDraft(xml = drawioXml) {
+    if (!xml) return;
+    setDiagramSaveState('Zwischenspeichern …', 'saving');
+    try {
+      const draft = {
+        xml,
+        title: els.diagramBlockTitle?.value || '',
+        targetBlockId: drawioTargetBlockId,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(DRAWIO_DRAFT_KEY, JSON.stringify(draft));
+      drawioLastSavedAt = draft.savedAt;
+      drawioDirty = false;
+
+      // Bei bereits eingefügten Diagrammen wird zusätzlich die bearbeitbare XML
+      // direkt im Journal-Projekt aktualisiert. Das PNG bleibt bis "Übernehmen" unverändert.
+      if (drawioTargetBlockId) {
+        const block = state.blocks.find(item => item.id === drawioTargetBlockId && item.type === 'diagram');
+        if (block) {
+          block.extra = xml;
+          if (els.diagramBlockTitle) block.title = els.diagramBlockTitle.value.trim();
+          saveAutosave();
+        }
+      }
+      setDiagramSaveState('Lokal gesichert · ' + new Date(draft.savedAt).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'}), 'saved');
+    } catch (err) {
+      console.warn('draw.io-Entwurf konnte nicht gespeichert werden', err);
+      setDiagramSaveState('Zwischenspeichern fehlgeschlagen', 'error');
+    }
+  }
+
+  function readDrawioDraft() {
+    try {
+      const raw = localStorage.getItem(DRAWIO_DRAFT_KEY);
+      if (!raw) return null;
+      const draft = JSON.parse(raw);
+      return draft && typeof draft.xml === 'string' ? draft : null;
+    } catch { return null; }
+  }
+
+  function clearDrawioDraft() {
+    try { localStorage.removeItem(DRAWIO_DRAFT_KEY); } catch {}
+  }
+
+  function postToDrawio(message) {
+    if (!els.drawioFrame.contentWindow) return;
+    els.drawioFrame.contentWindow.postMessage(JSON.stringify(message), DRAWIO_ORIGIN);
+  }
+
+  function initDiagramBoard() {
+    window.addEventListener('message', handleDrawioMessage);
+  }
+
+  function handleDrawioMessage(event) {
+    if (event.origin !== DRAWIO_ORIGIN || event.source !== els.drawioFrame.contentWindow) return;
+    let message;
+    try { message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; }
+    catch { return; }
+    if (!message || !message.event) return;
+
+    if (message.event === 'configure') {
+      postToDrawio({ action: 'configure', config: DRAWIO_LIGHT_CONFIG });
+      return;
+    }
+
+    if (message.event === 'init') {
+      drawioReady = true;
+      els.diagramLoading.classList.add('hidden');
+      setDiagramSaveState(drawioLastSavedAt ? 'Entwurf wiederhergestellt' : 'Entwurf lokal gesichert', 'saved');
+      postToDrawio({
+        action: 'load',
+        xml: drawioXml || EMPTY_DRAWIO_XML,
+        autosave: 1,
+        exportProtocol: true,
+        title: els.diagramBlockTitle.value.trim() || 'Lernjournal-Diagramm',
+        libs: 'general;flowchart;basic;arrows2;uml;er;network;cisco19;computers;webicons',
+        fit: 1
+      });
+    } else if (message.event === 'autosave' || message.event === 'save') {
+      if (message.xml) {
+        drawioXml = message.xml;
+        drawioDirty = true;
+        persistDrawioDraft(drawioXml);
+      }
+      // Das draw.io-interne Speichern darf die Arbeitsmappe nicht schließen.
+      // Einfügen in das Lernjournal geschieht ausschließlich über unseren Button.
+    } else if (message.event === 'export') {
+      if (message.xml) {
+        drawioXml = message.xml;
+        persistDrawioDraft(drawioXml);
+      }
+      if (drawioPendingAction === 'insert' && message.data) commitDrawioDiagram(message.data, drawioXml);
+      drawioPendingAction = null;
+    } else if (message.event === 'exit') {
+      // draw.io kann bei bestimmten Dialogen oder Browserzuständen ein exit senden.
+      // Der Editor wird sofort mit dem letzten lokalen Entwurf neu geladen, statt die Arbeitsmappe zu schließen.
+      persistDrawioDraft(drawioXml);
+      toast('draw.io wurde neu geladen. Dein letzter Entwurf bleibt erhalten.');
+      drawioReady = false;
+      els.diagramLoading.classList.remove('hidden');
+      setTimeout(() => { els.drawioFrame.src = DRAWIO_URL + '&t=' + Date.now(); }, 80);
+    }
+  }
+
+  function reloadDrawioInLightMode() {
+    persistDrawioDraft(drawioXml);
+    drawioReady = false;
+    els.diagramLoading.classList.remove('hidden');
+    setDiagramSaveState('Hellen Modus laden …', 'saving');
+    try {
+      els.drawioFrame.style.colorScheme = 'only light';
+      els.drawioFrame.style.forcedColorAdjust = 'none';
+    } catch {}
+    els.drawioFrame.src = DRAWIO_URL + '&lightReload=1&t=' + Date.now();
+  }
+
+  function openDiagramBoard() {
+    const selected = state.blocks.find(block => block.id === selectedBlockId && block.type === 'diagram');
+    drawioTargetBlockId = selected ? selected.id : null;
+    drawioXml = selected?.extra || EMPTY_DRAWIO_XML;
+    els.diagramBlockTitle.value = selected?.title || '';
+
+    // Nicht übernommene Arbeit aus der letzten draw.io-Sitzung automatisch wiederherstellen.
+    const draft = readDrawioDraft();
+    const draftMatches = draft && (draft.targetBlockId === drawioTargetBlockId || (!draft.targetBlockId && !drawioTargetBlockId));
+    if (draftMatches && draft.xml) {
+      drawioXml = draft.xml;
+      drawioLastSavedAt = Number(draft.savedAt) || 0;
+      if (draft.title && !els.diagramBlockTitle.value) els.diagramBlockTitle.value = draft.title;
+      setDiagramSaveState('Entwurf wird wiederhergestellt …', 'saving');
+    } else {
+      drawioLastSavedAt = 0;
+      setDiagramSaveState('Entwurf lokal gesichert', 'saved');
+    }
+
+    drawioReady = false;
+    drawioDirty = false;
+    drawioPendingAction = null;
+    els.diagramLoading.classList.remove('hidden');
+    els.diagramOverlay.classList.add('open');
+    els.diagramOverlay.setAttribute('aria-hidden', 'false');
+    els.drawioFrame.src = DRAWIO_URL + '&t=' + Date.now();
+  }
+
+  function closeDiagramBoard() {
+    // Beim Schließen bleibt der lokale Entwurf erhalten und wird beim nächsten Öffnen wiederhergestellt.
+    if (drawioXml) persistDrawioDraft(drawioXml);
+    els.diagramOverlay.classList.remove('open');
+    els.diagramOverlay.setAttribute('aria-hidden', 'true');
+    els.drawioFrame.src = 'about:blank';
+    drawioReady = false;
+  }
+
+  function requestDrawioInsert() {
+    if (!drawioReady) { toast('draw.io ist noch nicht vollständig geladen'); return; }
+    drawioPendingAction = 'insert';
+    postToDrawio({action:'export', format:'png', border:12, scale:2, background:'#ffffff'});
+  }
+
+  function commitDrawioDiagram(pngData, xml) {
+    const title = els.diagramBlockTitle.value.trim();
+    let block = drawioTargetBlockId ? state.blocks.find(item => item.id === drawioTargetBlockId) : null;
+    if (block) {
+      block.title = title;
+      block.content = pngData;
+      block.extra = xml || drawioXml;
+    } else {
+      block = { id: uid(), type: 'diagram', title, content: pngData, extra: xml || drawioXml };
+      state.blocks.push(block);
+    }
+    selectedBlockId = block.id;
+    renderEditor();
+    changed();
+    clearDrawioDraft();
+    drawioXml = '';
+    closeDiagramBoard();
+    setTimeout(() => selectBlock(block.id, true), 50);
+    toast(drawioTargetBlockId ? 'Diagramm wurde aktualisiert' : 'Diagramm wurde eingefügt');
+  }
+
+  function downloadDrawioFile() {
+    if (!drawioReady) { toast('draw.io ist noch nicht vollständig geladen'); return; }
+    drawioPendingAction = 'download';
+    postToDrawio({action:'export', format:'xml'});
+    const listener = event => {
+      if (event.origin !== DRAWIO_ORIGIN || event.source !== els.drawioFrame.contentWindow) return;
+      let message;
+      try { message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; } catch { return; }
+      if (message.event === 'export' && message.format === 'xml') {
+        window.removeEventListener('message', listener);
+        const xml = message.xml || message.data || drawioXml;
+        drawioXml = xml;
+        downloadBlob(safeFilename(els.diagramBlockTitle.value || 'Diagramm', '.drawio'), xml, 'application/xml;charset=utf-8');
+        drawioPendingAction = null;
+      }
+    };
+    window.addEventListener('message', listener);
+  }
+
+  function bindMetaInputs() {
+    const mapping = [['docTitle','title'],['docSubject','subject'],['docAuthor','author'],['docDate','date']];
+    mapping.forEach(([id,key]) => {
+      els[id].addEventListener('input', () => {
+        state[key] = els[id].value;
+        if (key === 'subject') setSubjectSelectValue(els.dashboardSubject, state.subject);
+        changed(false);
+      });
+    });
+  }
+
+  function downloadBlob(filename, content, type) {
+    const blob = new Blob([content], {type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function safeFilename(value, extension) {
+    const base = (value || 'Lernjournal').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ');
+    return base + extension;
+  }
+
+  function saveProject() {
+    downloadBlob(safeFilename(state.title, '.journal.json'), JSON.stringify(state, null, 2), 'application/json;charset=utf-8');
+    toast('Projektdatei gespeichert');
+  }
+
+  function exportHTML() {
+    renderPreview();
+    const pagesHTML = els.pages.innerHTML;
+    const css = [...document.styleSheets].map(sheet => {
+      try { return [...sheet.cssRules].map(rule => rule.cssText).join('\n'); }
+      catch { return ''; }
+    }).join('\n');
+    const payload = JSON.stringify(state).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(state.title || 'Lernjournal')}</title><style>${css}\nbody{overflow:auto;background:#22272e}.pages{padding:24px}.topbar,.editor-pane,.start-overlay,.toast{display:none!important}
+
+  /* Version 11: ruhiges, Apple-inspiriertes Interface nach den Designrichtlinien */
+  :root {
+    --bg: #f5f5f7;
+    --panel: #f5f5f7;
+    --panel-2: #ffffff;
+    --border: #e0e0e0;
+    --text: #1d1d1f;
+    --muted: #7a7a7a;
+    --accent: #0066cc;
+    --accent-2: #0071e3;
+    --danger: #c9343a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.01em;
+    color-scheme: light;
+  }
+
+  .topbar {
+    min-height: 52px;
+    padding: 7px 18px;
+    gap: 7px;
+    background: rgba(245,245,247,.88);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  .brand {
+    color: var(--text);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-right: 12px;
+  }
+
+  .btn {
+    border: 1px solid rgba(0,0,0,.10);
+    color: var(--text);
+    background: #ffffff;
+    border-radius: 9999px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    transition: transform .12s ease, background-color .12s ease, border-color .12s ease;
+    box-shadow: none;
+  }
+  .btn:hover { border-color: #0066cc; color: #0066cc; }
+  .btn:active { transform: scale(.95); }
+  .btn:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
+  .btn.primary {
+    background: #0066cc;
+    border-color: #0066cc;
+    color: #ffffff;
+  }
+  .btn.primary:hover { background: #0071e3; color: #ffffff; border-color: #0071e3; }
+  .btn.danger { color: #c9343a; }
+  .btn.small { padding: 7px 12px; border-radius: 9999px; font-size: 14px; }
+  .btn.icon { width: 34px; min-width: 34px; padding: 6px 0; border-radius: 50%; }
+
+  .status { color: var(--muted); font-size: 12px; letter-spacing: 0; }
+
+  .workspace { grid-template-columns: minmax(420px, 43%) 1fr; }
+
+  .editor-pane {
+    padding: 20px;
+    background: #f5f5f7;
+    border-right: 1px solid rgba(0,0,0,.08);
+  }
+
+  .preview-pane {
+    padding: 32px;
+    background: #ececee;
+  }
+
+  .section-card,
+  .block-card,
+  .start-dialog,
+  .import-dialog,
+  .ai-panel,
+  .format-panel {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 18px;
+    box-shadow: none;
+  }
+
+  .section-card { padding: 24px; margin-bottom: 20px; }
+  .section-title {
+    color: #1d1d1f;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  .meta-grid { gap: 14px; }
+  .field { gap: 7px; }
+  .field label {
+    color: #333333;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .field input, .field textarea, .field select,
+  .block-type, .diagram-title-input input, .ai-question, .import-source {
+    border: 1px solid rgba(0,0,0,.10);
+    background: #ffffff;
+    color: #1d1d1f;
+    border-radius: 11px;
+    padding: 12px 14px;
+    font-size: 17px;
+    line-height: 1.44;
+    box-shadow: none;
+  }
+  .field input::placeholder, .field textarea::placeholder, .ai-question::placeholder { color: #7a7a7a; }
+  .field input:focus, .field textarea:focus, .field select:focus,
+  .block-type:focus, .diagram-title-input input:focus, .ai-question:focus, .import-source:focus {
+    border-color: #0071e3;
+    outline: 2px solid rgba(0,113,227,.18);
+  }
+
+  .insert-bar { gap: 8px; }
+
+  .block-card { margin-bottom: 12px; overflow: hidden; }
+  .block-card:focus-within { border-color: #0071e3; }
+  .block-head {
+    padding: 10px 12px;
+    background: #fafafc;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .block-body { gap: 12px; padding: 16px; }
+  .block-type { font-size: 14px; padding: 9px 12px; }
+  .empty-state { border-color: #d2d2d7; border-radius: 18px; color: #7a7a7a; background: #ffffff; }
+
+  .page {
+    box-shadow: rgba(0,0,0,.12) 3px 5px 30px 0;
+  }
+
+  .start-overlay, .import-overlay {
+    background: rgba(245,245,247,.82);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+  .start-dialog { padding: 32px; }
+  .start-dialog h1 {
+    color: #1d1d1f;
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .start-dialog p { color: #333333; font-size: 17px; line-height: 1.47; }
+
+  .ai-head, .floating-head, .import-head, .import-actions {
+    background: #fafafc;
+    border-color: #e0e0e0;
+  }
+  .ai-head-title, .floating-title, .import-head strong, .import-preview-type { color: #0066cc; }
+  .ai-context, .import-preview-row {
+    background: #f5f5f7;
+    border: 1px solid #e0e0e0;
+    color: #1d1d1f;
+    border-radius: 11px;
+  }
+  .ai-hint, .format-help, .diagram-tip, .import-options { color: #7a7a7a; }
+  .import-preview-text { color: #1d1d1f; }
+
+  .diagram-dialog { background: #ffffff; }
+  .diagram-hostbar, .diagram-actions {
+    background: #f5f5f7;
+    color: #1d1d1f;
+    border-color: #e0e0e0;
+  }
+  .diagram-save-state { color: #7a7a7a; }
+  .diagram-save-state.saved { color: #248a3d; }
+  .diagram-save-state.saving, .diagram-offline-note { color: #9a6700; }
+  .diagram-save-state.error { color: #c9343a; }
+
+  .toast {
+    background: #1d1d1f;
+    color: #ffffff;
+    border: 0;
+    border-radius: 9999px;
+    box-shadow: none;
+  }
+
+  @media (max-width: 1068px) {
+    .workspace { grid-template-columns: minmax(380px, 48%) 1fr; }
+    .preview-pane { padding: 20px; }
+  }
+  @media (max-width: 833px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100vh; }
+    .topbar { position: sticky; top: 0; z-index: 50; }
+    .workspace { display: block; }
+    .editor-pane, .preview-pane { overflow: visible; border: 0; }
+    .preview-pane { padding: 20px 8px 48px; }
+    .meta-grid { grid-template-columns: 1fr; }
+    .page { transform-origin: top center; }
+  }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .topbar { padding: 7px 10px; }
+    .brand { font-size: 18px; }
+    .editor-pane { padding: 12px; }
+    .section-card { padding: 18px; }
+    .btn.small { padding: 7px 11px; }
+  }
+</style></head><body><div class="pages">${pagesHTML}</div><script type="application/json" id="journal-data">${payload}<\/script></body></html>`;
+    downloadBlob(safeFilename(state.title, '.html'), html, 'text/html;charset=utf-8');
+    toast('Lesbare HTML-Datei exportiert');
+  }
+
+
+  function stripInlineMarkdown(text) {
+    return String(text || '')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .replace(/`([^`]+)`/g, '$1');
+  }
+
+  function blockToMarkdown(block) {
+    const title = String(block.title || '').trim();
+    const content = String(block.content || '').trim();
+    switch (block.type) {
+      case 'h1': return '# ' + content;
+      case 'h2': return '## ' + content;
+      case 'paragraph': return content;
+      case 'bullets': return content.split(/\r?\n/).filter(x => x.trim()).map(x => '* ' + x.trim()).join('\n');
+      case 'numbered': return content.split(/\r?\n/).filter(x => x.trim()).map((x,i) => `${i+1}. ${x.trim()}`).join('\n');
+      case 'definition': return `### ${title || 'Definition'}\n\n${content}`;
+      case 'example': return `### ${title || 'Beispiel'}\n\n${content}`;
+      case 'merksatz': return `## ${title || 'Merksatz'}\n\n> ${content.replace(/\n/g, '\n> ')}`;
+      case 'code': return `${title ? '### ' + title + '\n\n' : ''}\`\`\`\n${content}\n\`\`\``;
+      case 'table': {
+        const rows = content.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
+        if (!rows.length) return title ? `### ${title}` : '';
+        const width = Math.max(...rows.map(r => r.length));
+        const normalized = rows.map(r => [...r, ...Array(width-r.length).fill('')]);
+        const head = '| ' + normalized[0].join(' | ') + ' |';
+        const sep = '| ' + Array(width).fill('---').join(' | ') + ' |';
+        const body = normalized.slice(1).map(r => '| ' + r.join(' | ') + ' |').join('\n');
+        return `${title ? '### ' + title + '\n\n' : ''}${head}\n${sep}${body ? '\n' + body : ''}`;
+      }
+      case 'qa': return `### ${title || 'Prüfungsfrage'}\n\n**Frage:** ${content}\n\n**Lösung:** ${String(block.extra || '').trim()}`;
+      case 'diagram': return `${title ? '### ' + title + '\n\n' : ''}${content ? `![${title || 'Diagramm'}](${content})` : '*Kein Diagramm vorhanden*'}`;
+      case 'pagebreak': return '\n<div style="page-break-after: always;"></div>\n';
+      default: return content;
+    }
+  }
+
+  function exportMarkdown() {
+    const header = [`# ${state.title || 'Lernjournal'}`];
+    if (state.subject) header.push(`**Fach:** ${state.subject}`);
+    if (state.author) header.push(`**Autor:** ${state.author}`);
+    if (state.date) header.push(`**${state.date}**`);
+    const body = state.blocks.map(blockToMarkdown).filter(Boolean).join('\n\n---\n\n');
+    downloadBlob(safeFilename(state.title, '.md'), header.join('\n\n') + '\n\n' + body + '\n', 'text/markdown;charset=utf-8');
+    toast('Markdown-Datei gespeichert');
+  }
+
+  function loadDocxLibrary() {
+    if (window.docx) return Promise.resolve(window.docx);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/docx@8.5.0/build/index.umd.js';
+      script.onload = () => window.docx ? resolve(window.docx) : reject(new Error('DOCX-Bibliothek wurde nicht initialisiert.'));
+      script.onerror = () => reject(new Error('DOCX-Bibliothek konnte nicht geladen werden. Internetverbindung prüfen.'));
+      document.head.appendChild(script);
+    });
+  }
+
+  function wordInlineRuns(text, docxLib) {
+    const { TextRun, HighlightColor } = docxLib;
+    const source = String(text || '');
+    const tokenRx = /(\*\*[^*]+\*\*|__[^_]+__|==[^=]+==|`[^`]+`|\*[^*]+\*)/g;
+    const runs = [];
+    let last = 0;
+    let match;
+    while ((match = tokenRx.exec(source))) {
+      if (match.index > last) runs.push(new TextRun({ text: source.slice(last, match.index), font: 'Tahoma', size: 22 }));
+      const token = match[0];
+      if (token.startsWith('**')) runs.push(new TextRun({ text: token.slice(2, -2), bold: true, font: 'Tahoma', size: 22 }));
+      else if (token.startsWith('__')) runs.push(new TextRun({ text: token.slice(2, -2), underline: {}, font: 'Tahoma', size: 22 }));
+      else if (token.startsWith('==')) runs.push(new TextRun({ text: token.slice(2, -2), highlight: HighlightColor.YELLOW, font: 'Tahoma', size: 22 }));
+      else if (token.startsWith('`')) runs.push(new TextRun({ text: token.slice(1, -1), font: 'Consolas', size: 20, shading: { fill: 'EEF1F4' } }));
+      else runs.push(new TextRun({ text: token.slice(1, -1), italics: true, font: 'Tahoma', size: 22 }));
+      last = tokenRx.lastIndex;
+    }
+    if (last < source.length) runs.push(new TextRun({ text: source.slice(last), font: 'Tahoma', size: 22 }));
+    return runs.length ? runs : [new TextRun({ text: '', font: 'Tahoma', size: 22 })];
+  }
+
+  function dataUrlToUint8Array(dataUrl) {
+    const base64 = String(dataUrl || '').split(',')[1] || '';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function exportWord() {
+    try {
+      setStatus('Word-Datei wird erstellt …');
+      const d = await loadDocxLibrary();
+      const {
+        Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
+        Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
+        Header, Footer, PageNumber, PageBreak, ImageRun, TableOfContents
+      } = d;
+
+      const blue = '1F4E79';
+      const children = [];
+      const para = (text, options = {}) => new Paragraph({
+        children: wordInlineRuns(text, d),
+        spacing: { after: options.after ?? 120, line: 276 },
+        alignment: options.alignment,
+        keepNext: options.keepNext,
+        style: options.style,
+        heading: options.heading
+      });
+
+      children.push(new Paragraph({
+        children: [new TextRun({ text: state.title || 'Lernjournal', bold: true, color: blue, font: 'Tahoma', size: 40 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 2400, after: 480 }
+      }));
+      if (state.subject) children.push(new Paragraph({ children: [new TextRun({ text: state.subject, bold: true, font: 'Tahoma', size: 26 })], alignment: AlignmentType.CENTER, spacing: { after: 180 } }));
+      if (state.author) children.push(new Paragraph({ children: [new TextRun({ text: state.author, font: 'Tahoma', size: 22 })], alignment: AlignmentType.CENTER, spacing: { after: 120 } }));
+      if (state.date) children.push(new Paragraph({ children: [new TextRun({ text: state.date, font: 'Tahoma', size: 22 })], alignment: AlignmentType.CENTER }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(new Paragraph({ children: [new TextRun({ text: 'Inhaltsverzeichnis', bold: true, color: blue, font: 'Tahoma', size: 32 })], alignment: AlignmentType.CENTER, spacing: { after: 320 } }));
+      children.push(new TableOfContents('', { hyperlink: true, headingStyleRange: '1-2' }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+
+      for (const block of state.blocks) {
+        const content = String(block.content || '');
+        const title = String(block.title || '');
+        if (block.type === 'pagebreak') {
+          children.push(new Paragraph({ children: [new PageBreak()] }));
+          continue;
+        }
+        if (block.type === 'h1') {
+          children.push(new Paragraph({ text: content, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { before: 240, after: 180 }, keepNext: true }));
+          continue;
+        }
+        if (block.type === 'h2') {
+          children.push(new Paragraph({ text: content, heading: HeadingLevel.HEADING_2, spacing: { before: 220, after: 120 }, keepNext: true }));
+          continue;
+        }
+        if (block.type === 'paragraph') {
+          content.split(/\r?\n/).forEach(line => children.push(para(line)));
+          continue;
+        }
+        if (block.type === 'bullets' || block.type === 'numbered') {
+          content.split(/\r?\n/).map(x => x.trim()).filter(Boolean).forEach((item) => {
+            children.push(new Paragraph({
+              children: wordInlineRuns(item, d),
+              bullet: block.type === 'bullets' ? { level: 0 } : undefined,
+              numbering: block.type === 'numbered' ? { reference: 'journal-numbering', level: 0 } : undefined,
+              spacing: { after: 80, line: 276 },
+              indent: { left: 540, hanging: 260 }
+            }));
+          });
+          continue;
+        }
+        if (['definition','example'].includes(block.type)) {
+          children.push(new Paragraph({ children: [new TextRun({ text: title || TYPE_LABELS[block.type], bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { before: 180, after: 80 }, keepNext: true }));
+          content.split(/\r?\n/).forEach(line => children.push(para(line)));
+          continue;
+        }
+        if (block.type === 'merksatz') {
+          const boxParas = [
+            new Paragraph({ children: [new TextRun({ text: title || 'Merksatz', bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { after: 80 } }),
+            ...content.split(/\r?\n/).map(line => para(line, { after: 60 }))
+          ];
+          children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [new TableRow({ children: [new TableCell({ children: boxParas, shading: { type: ShadingType.CLEAR, fill: 'EAF3F8' }, margins: { top: 140, bottom: 140, left: 180, right: 180 } })] })],
+            borders: { top: { style: BorderStyle.SINGLE, size: 8, color: blue }, bottom: { style: BorderStyle.SINGLE, size: 8, color: blue }, left: { style: BorderStyle.SINGLE, size: 8, color: blue }, right: { style: BorderStyle.SINGLE, size: 8, color: blue }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } }
+          }));
+          children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+          continue;
+        }
+        if (block.type === 'code') {
+          if (title) children.push(new Paragraph({ children: [new TextRun({ text: title, bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { before: 180, after: 80 }, keepNext: true }));
+          const codeParas = content.split(/\r?\n/).map(line => new Paragraph({ children: [new TextRun({ text: line || ' ', font: 'Consolas', size: 19 })], spacing: { after: 0, line: 240 } }));
+          children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: [new TableCell({ children: codeParas, shading: { type: ShadingType.CLEAR, fill: 'F3F5F7' }, margins: { top: 120, bottom: 120, left: 160, right: 160 } })] })] }));
+          children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+          continue;
+        }
+        if (block.type === 'table') {
+          if (title) children.push(new Paragraph({ children: [new TextRun({ text: title, bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { before: 180, after: 80 }, keepNext: true }));
+          const rows = content.split(/\r?\n/).filter(Boolean).map(r => r.split('\t'));
+          if (rows.length) {
+            const colCount = Math.max(...rows.map(r => r.length));
+            const tableRows = rows.map((row, ri) => new TableRow({
+              tableHeader: ri === 0,
+              children: Array.from({ length: colCount }, (_, ci) => new TableCell({
+                children: [new Paragraph({ children: wordInlineRuns(row[ci] || '', d), spacing: { after: 0 } })],
+                shading: ri === 0 ? { type: ShadingType.CLEAR, fill: 'D9EAF7' } : undefined,
+                margins: { top: 90, bottom: 90, left: 100, right: 100 }
+              }))
+            }));
+            children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: tableRows }));
+            children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+          }
+          continue;
+        }
+        if (block.type === 'qa') {
+          children.push(new Paragraph({ children: [new TextRun({ text: title || 'Prüfungsfrage', bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { before: 180, after: 100 }, keepNext: true }));
+          children.push(new Paragraph({ children: [new TextRun({ text: 'Frage: ', bold: true, font: 'Tahoma', size: 22 }), ...wordInlineRuns(content, d)], spacing: { after: 100 } }));
+          children.push(new Paragraph({ children: [new TextRun({ text: 'Lösung: ', bold: true, font: 'Tahoma', size: 22 }), ...wordInlineRuns(String(block.extra || ''), d)], spacing: { after: 140 } }));
+          continue;
+        }
+        if (block.type === 'diagram') {
+          if (title) children.push(new Paragraph({ children: [new TextRun({ text: title, bold: true, color: blue, font: 'Tahoma', size: 26 })], spacing: { before: 180, after: 100 }, keepNext: true }));
+          if (content.startsWith('data:image/')) {
+            children.push(new Paragraph({ children: [new ImageRun({ data: dataUrlToUint8Array(content), transformation: { width: 620, height: 360 } })], alignment: AlignmentType.CENTER, spacing: { after: 140 } }));
+          }
+        }
+      }
+
+      const doc = new Document({
+        creator: state.author || 'Lernjournal Editor',
+        title: state.title || 'Lernjournal',
+        description: state.subject || '',
+        numbering: { config: [{ reference: 'journal-numbering', levels: [{ level: 0, format: 'decimal', text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 260 } } } }] }] },
+        styles: {
+          default: { document: { run: { font: 'Tahoma', size: 22, color: '111111' }, paragraph: { spacing: { line: 276, after: 120 } } } },
+          paragraphStyles: [
+            { id: 'Heading1', name: 'Überschrift 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: 'Tahoma', size: 32, bold: true, color: blue }, paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 180 }, keepNext: true, outlineLevel: 0 } },
+            { id: 'Heading2', name: 'Überschrift 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: 'Tahoma', size: 26, bold: true, color: blue }, paragraph: { spacing: { before: 220, after: 120 }, keepNext: true, outlineLevel: 1 } }
+          ]
+        },
+        sections: [{
+          properties: {
+            page: { size: { width: 11906, height: 16838 }, margin: { top: 1417, right: 1134, bottom: 1417, left: 850, header: 567, footer: 567 } }
+          },
+          headers: { default: new Header({ children: [new Paragraph({ children: [new TextRun({ text: state.subject || '', font: 'Tahoma', size: 18 }), new TextRun({ text: '\t' + (state.author || ''), font: 'Tahoma', size: 18 })], tabStops: [{ type: 'right', position: 9300 }], border: { bottom: { color: '999999', space: 4, style: BorderStyle.SINGLE, size: 4 } } })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ children: [new TextRun({ children: [PageNumber.CURRENT], font: 'Tahoma', size: 18 })], alignment: AlignmentType.CENTER })] }) },
+          children
+        }]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(safeFilename(state.title, '.docx'), blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      toast('Saubere DOCX-Datei gespeichert');
+      setStatus('Word-Export abgeschlossen');
+    } catch (error) {
+      console.error(error);
+      setStatus('Word-Export fehlgeschlagen');
+      alert('Word-Export fehlgeschlagen: ' + error.message);
+    }
+  }
+
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.onload = () => resolve(window.html2canvas);
+      script.onerror = () => reject(new Error('html2canvas konnte nicht geladen werden.'));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function exportJPG() {
+    try {
+      setStatus('JPG wird erstellt …');
+      renderPreview();
+      const html2canvas = await loadHtml2Canvas();
+      const pages = [...els.pages.querySelectorAll('.page')];
+      if (!pages.length) throw new Error('Keine Seiten vorhanden.');
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: pages[i].scrollWidth,
+          height: pages[i].scrollHeight
+        });
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+        if (!blob) throw new Error('JPG konnte nicht erzeugt werden.');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = safeFilename(`${state.title || 'Lernjournal'}_Seite_${String(i+1).padStart(2,'0')}`, '.jpg');
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        await new Promise(r => setTimeout(r, 250));
+      }
+      toast(`${pages.length} JPG-Seite(n) gespeichert`);
+      setStatus('Bereit');
+    } catch (err) {
+      console.error(err);
+      setStatus('JPG-Export fehlgeschlagen');
+      alert('JPG-Export fehlgeschlagen: ' + err.message + '\n\nFür den JPG-Export wird einmalig eine Internetverbindung benötigt, um die Renderbibliothek zu laden.');
+    }
+  }
+
+  function openFile() { els.fileInput.value = ''; els.fileInput.click(); }
+
+  async function handleFile(file) {
+    const text = await file.text();
+    let data;
+    if (/\.html?$/i.test(file.name) || text.trimStart().startsWith('<!doctype') || text.includes('id="journal-data"')) {
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const node = doc.getElementById('journal-data');
+      if (!node) throw new Error('Die HTML-Datei enthält keine bearbeitbaren Journaldaten.');
+      data = JSON.parse(node.textContent);
+    } else {
+      data = JSON.parse(text);
+    }
+    state = normalizeState(data);
+    hydrateInputs(); renderEditor(); renderPreview(); saveAutosave();
+    els.startOverlay.classList.add('hidden');
+    toast('Datei geöffnet');
+  }
+
+  function activateDocument(nextState, message) {
+    state = nextState;
+    selectedBlockId = state.blocks[0]?.id || null;
+    hydrateInputs(); renderEditor(); renderPreview(); saveAutosave(); updateAIContext();
+    els.startOverlay.classList.add('hidden');
+    toast(message);
+    setTimeout(() => els.docTitle.focus(), 80);
+  }
+
+  function newDocument(subject = '') {
+    activateDocument(createBlankState(subject), subject ? `Leeres Dokument für ${subject} angelegt` : 'Leeres Dokument angelegt');
+  }
+
+  function newFromTemplate(kind, subject = '') {
+    activateDocument(createTemplateState(kind, subject), kind === 'learning' ? 'Lernskript-Vorlage angelegt' : 'Mitschrift-Vorlage angelegt');
+  }
+
+  function selectedDashboardSubject() {
+    return els.dashboardSubject?.value || '';
+  }
+
+  function recoverDraft() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) { toast('Kein lokaler Entwurf vorhanden'); return; }
+      state = normalizeState(JSON.parse(raw));
+      selectedBlockId = state.blocks[0]?.id || null;
+      hydrateInputs(); renderEditor(); renderPreview(); updateAIContext();
+      els.startOverlay.classList.add('hidden');
+      toast('Lokaler Entwurf wiederhergestellt');
+    } catch (error) {
+      alert('Der lokale Entwurf konnte nicht geladen werden:\n' + error.message);
+    }
+  }
+
+  function closeWindow() {
+    els.startOverlay.classList.add('hidden');
+    toast('Editor geöffnet');
+  }
+
+  function updateDashboardStatus() {
+    const dateNode = $('dashboardDate');
+    if (dateNode) dateNode.textContent = new Intl.DateTimeFormat('de-DE', {weekday:'long', day:'2-digit', month:'long', year:'numeric'}).format(new Date());
+    setSubjectSelectValue(els.dashboardSubject, state.subject || '');
+    const statusNode = $('draftStatus');
+    const recoverBtn = $('recoverDraftBtn');
+    let hasDraft = false;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        hasDraft = Boolean(draft && (draft.title || draft.subject || (Array.isArray(draft.blocks) && draft.blocks.length)));
+      }
+    } catch {}
+    if (statusNode) statusNode.textContent = hasDraft ? 'Ein lokaler Entwurf ist verfügbar.' : 'Kein lokaler Entwurf gefunden.';
+    if (recoverBtn) recoverBtn.disabled = !hasDraft;
+  }
+
+  function bindButtons() {
+    $('newBtn').addEventListener('click', () => newDocument(''));
+    $('openBtn').addEventListener('click', openFile);
+    $('importBtn').addEventListener('click', openImportDialog);
+    $('wordImportBtn').addEventListener('click', () => els.wordFileInput.click());
+    els.wordFileInput.addEventListener('change', event => importWordFile(event.target.files?.[0]));
+    $('analyzeImportBtn').addEventListener('click', analyzeImport);
+    $('applyImportBtn').addEventListener('click', applyImport);
+    $('importCloseBtn').addEventListener('click', closeImportDialog);
+    $('cancelImportBtn').addEventListener('click', closeImportDialog);
+    els.importOverlay.addEventListener('click', event => { if (event.target === els.importOverlay) closeImportDialog(); });
+    $('saveBtn').addEventListener('click', saveProject);
+    $('exportBtn').addEventListener('click', exportHTML);
+    $('wordBtn').addEventListener('click', exportWord);
+    $('jpgBtn').addEventListener('click', exportJPG);
+    $('markdownBtn').addEventListener('click', exportMarkdown);
+    $('printBtn').addEventListener('click', () => { renderPreview(); window.print(); });
+    const setAICollapsed = (collapsed) => {
+      els.aiPanel.classList.toggle('collapsed', collapsed);
+      const collapseBtn = $('aiCollapseBtn');
+      collapseBtn.textContent = collapsed ? '+' : '−';
+      collapseBtn.title = collapsed ? 'Ausklappen' : 'Einklappen';
+      collapseBtn.setAttribute('aria-label', collapsed ? 'KI-Assistent ausklappen' : 'KI-Assistent einklappen');
+    };
+    const toggleAICollapsed = () => setAICollapsed(!els.aiPanel.classList.contains('collapsed'));
+
+    $('formatBtn').addEventListener('click', () => {
+      openFormatPanel();
+      els.formatPanel.classList.remove('collapsed');
+      $('formatCollapseBtn').textContent = '−';
+    });
+    $('formatCollapseBtn').addEventListener('click', toggleFormatCollapsed);
+    $('formatHeadTitle').addEventListener('click', toggleFormatCollapsed);
+    $('formatCloseBtn').addEventListener('click', () => {
+      els.formatPanel.classList.remove('open');
+      els.formatPanel.setAttribute('aria-hidden', 'true');
+    });
+    document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('mousedown', event => {
+      event.preventDefault();
+      applyTextFormat(button.dataset.format);
+    }));
+
+    $('diagramBtn').addEventListener('click', openDiagramBoard);
+    $('diagramCloseBtn').addEventListener('click', closeDiagramBoard);
+    $('diagramInsertBtn').addEventListener('click', requestDrawioInsert);
+    $('diagramDownloadBtn').addEventListener('click', downloadDrawioFile);
+    $('diagramTemplateBtn').addEventListener('click', () => drawioReady && postToDrawio({action:'template', noExitOnCancel:true}));
+    $('diagramFitBtn').addEventListener('click', () => drawioReady && postToDrawio({action:'fit', border:24, maxScale:1}));
+    els.diagramBlockTitle.addEventListener('input', () => persistDrawioDraft(drawioXml));
+
+    $('aiBtn').addEventListener('click', () => {
+      const isOpen = els.aiPanel.classList.contains('open');
+      if (!isOpen) {
+        els.aiPanel.classList.add('open');
+        els.aiPanel.setAttribute('aria-hidden','false');
+        setAICollapsed(false);
+        updateAIContext();
+      } else {
+        toggleAICollapsed();
+      }
+    });
+    $('aiCollapseBtn').addEventListener('click', toggleAICollapsed);
+    $('aiHeadTitle').addEventListener('click', toggleAICollapsed);
+    $('aiCloseBtn').addEventListener('click', () => {
+      els.aiPanel.classList.remove('open', 'collapsed');
+      els.aiPanel.setAttribute('aria-hidden','true');
+    });
+    $('askChatGPTBtn').addEventListener('click', () => copyAIPrompt(true));
+    $('copyPromptBtn').addEventListener('click', () => copyAIPrompt(false));
+    $('startBtn').addEventListener('click', () => { updateDashboardStatus(); els.startOverlay.classList.remove('hidden'); });
+    $('guideToggleBtn').addEventListener('click', () => {
+      const content = $('guideContent');
+      const hidden = content.hidden = !content.hidden;
+      $('guideToggleBtn').textContent = hidden ? 'Einblenden' : 'Ausblenden';
+    });
+    $('startNewBtn').addEventListener('click', () => newDocument(selectedDashboardSubject()));
+    $('templateLearningBtn').addEventListener('click', () => newFromTemplate('learning', selectedDashboardSubject()));
+    $('templateNotesBtn').addEventListener('click', () => newFromTemplate('notes', selectedDashboardSubject()));
+    $('recoverDraftBtn').addEventListener('click', recoverDraft);
+    $('startOpenBtn').addEventListener('click', openFile);
+    $('startCloseBtn').addEventListener('click', closeWindow);
+    els.fileInput.addEventListener('change', async () => {
+      const file = els.fileInput.files?.[0];
+      if (!file) return;
+      try { await handleFile(file); }
+      catch (err) { alert('Datei konnte nicht geöffnet werden:\n' + err.message); }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && els.diagramOverlay.classList.contains('open')) { closeDiagramBoard(); return; }
+      if (event.key === 'Escape' && els.importOverlay.classList.contains('open')) { closeImportDialog(); return; }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault(); saveProject();
+      }
+    });
+  }
+
+  function init() {
+    populateSubjectSelect(els.docSubject);
+    populateSubjectSelect(els.dashboardSubject);
+    renderInsertBar();
+    bindMetaInputs();
+    bindButtons();
+    document.getElementById('diagramLightBtn')?.addEventListener('click', reloadDrawioInLightMode);
+    initDiagramBoard();
+    state = createBlankState();
+    hydrateInputs();
+    renderEditor();
+    selectedBlockId = null;
+    updateAIContext();
+    updateDashboardStatus();
+    requestAnimationFrame(renderPreview);
+    setStatus('Leeres Dokument bereit');
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (els.diagramOverlay.classList.contains('open') && drawioXml) persistDrawioDraft(drawioXml);
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
