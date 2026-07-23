@@ -7,7 +7,7 @@ Hier sammle und strukturiere ich mein Wissen aus den Bereichen Informatik, Cyber
 
 Mit dem Lernjournal-Editor können neue Lernskripte, Mitschriften und Markdown-Dokumente für die Wissensdatenbank erstellt werden.
 
-[Editor öffnen](editor/){ .md-button .md-button--primary }
+[Editor öffnen](editor.md){ .md-button .md-button--primary }
 
 ## Themenbereiche
 

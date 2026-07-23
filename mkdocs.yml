@@ -1,6 +1,12 @@
 site_name: Alexanders Wissensdatenbank
 site_description: Persönliche Wissensdatenbank für Informatik, Netzwerktechnik und Programmierung
 site_url: https://wissen.gerichtert.com
+
+# Der bisherige Einzeldatei-Editor bleibt als Legacy-Quelle im Repository.
+# Ohne diesen Ausschluss würde er mit docs/editor.md um /editor/ kollidieren.
+exclude_docs: |
+  editor/index.html
+
 theme:
   name: material
   language: de
@@ -41,7 +47,11 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -50,9 +60,21 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 
+extra_css:
+  - https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css
+  - https://uicdn.toast.com/editor/3.2.2/theme/toastui-editor-dark.min.css
+  - assets/stylesheets/markdown-editor.css
+
+extra_javascript:
+  - https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js
+  - assets/javascripts/mermaid.mjs
+  - assets/javascripts/markdown-editor.js
+
 nav:
 
   - Startseite: index.md
+
+  - Editor: editor.md
 
   - Netzwerktechnik:
       - Übersicht: netzwerktechnik/index.md
