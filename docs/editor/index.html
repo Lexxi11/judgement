@@ -2514,42 +2514,126 @@
       .replace(/`([^`]+)`/g, '$1');
   }
 
-  function blockToMarkdown(block) {
-    const title = String(block.title || '').trim();
-    const content = String(block.content || '').trim();
-    switch (block.type) {
-      case 'h1': return '# ' + content;
-      case 'h2': return '## ' + content;
-      case 'paragraph': return content;
-      case 'bullets': return content.split(/\r?\n/).filter(x => x.trim()).map(x => '* ' + x.trim()).join('\n');
-      case 'numbered': return content.split(/\r?\n/).filter(x => x.trim()).map((x,i) => `${i+1}. ${x.trim()}`).join('\n');
-      case 'definition': return `### ${title || 'Definition'}\n\n${content}`;
-      case 'example': return `### ${title || 'Beispiel'}\n\n${content}`;
-      case 'merksatz': return `## ${title || 'Merksatz'}\n\n> ${content.replace(/\n/g, '\n> ')}`;
-      case 'code': return `${title ? '### ' + title + '\n\n' : ''}\`\`\`\n${content}\n\`\`\``;
-      case 'table': {
-        const rows = content.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
-        if (!rows.length) return title ? `### ${title}` : '';
-        const width = Math.max(...rows.map(r => r.length));
-        const normalized = rows.map(r => [...r, ...Array(width-r.length).fill('')]);
-        const head = '| ' + normalized[0].join(' | ') + ' |';
-        const sep = '| ' + Array(width).fill('---').join(' | ') + ' |';
-        const body = normalized.slice(1).map(r => '| ' + r.join(' | ') + ' |').join('\n');
-        return `${title ? '### ' + title + '\n\n' : ''}${head}\n${sep}${body ? '\n' + body : ''}`;
+  function indentMarkdown(text) {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map(line => '    ' + line)
+    .join('\n');
+}
+
+function blockToMarkdown(block) {
+  const title = String(block.title || '').trim();
+  const content = String(block.content || '').trim();
+
+  switch (block.type) {
+    case 'h1':
+      return '# ' + content;
+
+    case 'h2':
+      return '## ' + content;
+
+    case 'paragraph':
+      return content;
+
+    case 'bullets':
+      return content
+        .split(/\r?\n/)
+        .filter(line => line.trim())
+        .map(line => '- ' + line.trim())
+        .join('\n');
+
+    case 'numbered':
+      return content
+        .split(/\r?\n/)
+        .filter(line => line.trim())
+        .map((line, index) => `${index + 1}. ${line.trim()}`)
+        .join('\n');
+
+    case 'definition':
+      return `!!! info "${title || 'Definition'}"
+
+${indentMarkdown(content)}`;
+
+    case 'example':
+      return `!!! example "${title || 'Beispiel'}"
+
+${indentMarkdown(content)}`;
+
+    case 'merksatz':
+      return `!!! tip "${title || 'Merksatz'}"
+
+${indentMarkdown(content)}`;
+
+    case 'code':
+      return `${title ? '### ' + title + '\n\n' : ''}\`\`\`
+${content}
+\`\`\``;
+
+    case 'table': {
+      const rows = content
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map(row => row.split('\t'));
+
+      if (!rows.length) {
+        return title ? `### ${title}` : '';
       }
-      case 'qa': return `### ${title || 'Prüfungsfrage'}\n\n**Frage:** ${content}\n\n**Lösung:** ${String(block.extra || '').trim()}`;
-      case 'diagram': return `${title ? '### ' + title + '\n\n' : ''}${content ? `![${title || 'Diagramm'}](${content})` : '*Kein Diagramm vorhanden*'}`;
-      case 'pagebreak': return '\n<div style="page-break-after: always;"></div>\n';
-      default: return content;
+
+      const width = Math.max(...rows.map(row => row.length));
+
+      const normalized = rows.map(row => [
+        ...row,
+        ...Array(width - row.length).fill('')
+      ]);
+
+      const head = '| ' + normalized[0].join(' | ') + ' |';
+      const separator = '| ' + Array(width).fill('---').join(' | ') + ' |';
+
+      const body = normalized
+        .slice(1)
+        .map(row => '| ' + row.join(' | ') + ' |')
+        .join('\n');
+
+      return `${title ? '### ' + title + '\n\n' : ''}${head}
+${separator}${body ? '\n' + body : ''}`;
     }
+
+    case 'qa': {
+      const solution = String(block.extra || '').trim();
+
+      return `### ${title || 'Prüfungsfrage'}
+
+**Frage:** ${content}
+
+??? success "Lösung anzeigen"
+
+${indentMarkdown(solution || 'Noch keine Lösung eingetragen.')}`;
+    }
+
+    case 'diagram':
+      return `${title ? '### ' + title + '\n\n' : ''}${
+        content
+          ? `![${title || 'Diagramm'}](${content})`
+          : '*Kein Diagramm vorhanden*'
+      }`;
+
+    case 'pagebreak':
+      return '<div class="page-break"></div>';
+
+    default:
+      return content;
   }
+}
 
   function exportMarkdown() {
     const header = [`# ${state.title || 'Lernjournal'}`];
     if (state.subject) header.push(`**Fach:** ${state.subject}`);
     if (state.author) header.push(`**Autor:** ${state.author}`);
     if (state.date) header.push(`**${state.date}**`);
-    const body = state.blocks.map(blockToMarkdown).filter(Boolean).join('\n\n---\n\n');
+    const body = state.blocks
+  .map(blockToMarkdown)
+  .filter(Boolean)
+  .join('\n\n');
     downloadBlob(safeFilename(state.title, '.md'), header.join('\n\n') + '\n\n' + body + '\n', 'text/markdown;charset=utf-8');
     toast('Markdown-Datei gespeichert');
   }
