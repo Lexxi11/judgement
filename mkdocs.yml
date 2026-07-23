@@ -51,6 +51,7 @@ markdown_extensions:
       custom_checkbox: true
 
 nav:
+
   - Startseite: index.md
 
   - Netzwerktechnik:
@@ -82,3 +83,5 @@ nav:
       - Übersicht: mathematik-und-logik/index.md
       - Binärsystem: mathematik-und-logik/binaersystem.md
       - Boolesche Algebra: mathematik-und-logik/boolesche-algebra.md
+
+  - Schlagwörter: tags.md
